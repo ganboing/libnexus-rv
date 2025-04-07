@@ -11,7 +11,6 @@
 enum nexus_error {
     nexus_ok,
     nexus_bad_mseo,
-    nexus_stream_offsync,
     nexus_stream_truncate,
     nexus_msg_invalid,
     nexus_msg_missing_field,
