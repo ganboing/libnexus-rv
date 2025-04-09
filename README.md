@@ -26,6 +26,19 @@ The API Documentation is embedded as inline comments in the header files.
 
 They should be self-explanatory.
 
+## Limitations
+
+For more efficient storage of data structures, currently the size of the following fields are reduced.
+During decoding, higher bits are discarded.
+ * `SRC 12 -> 10`
+ * `X-ADDR 63 -> 58`
+ * `TIMESTAMP 64 -> 54`
+
+This is considered a reasonable compromise:
+ * 10-bit SRC gives 1024 Harts maximum.
+ * 58-bit X-ADDR can reconstruct 59-bit PC, which already covers Sv57x4
+ * 54-bit TIMESTAMP wraps around in ~208.5 days for 1ns timer
+
 ## Utilities
 
 The library providers two utilities and demonstrate the use of decoder/encoder:
