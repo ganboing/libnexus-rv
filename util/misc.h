@@ -8,8 +8,6 @@
 
 #include <unistd.h>
 
-ssize_t readAll(int Fd, void *Buf, size_t Count);
-
-ssize_t seekPipe(int Fd, size_t Skip);
+ssize_t seek_pipe(int fd, size_t skip);
 
 #endif

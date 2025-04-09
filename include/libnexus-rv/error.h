@@ -10,10 +10,15 @@
 
 enum nexus_error {
     nexus_ok,
-    nexus_bad_mseo,
+    nexus_fail,
+    nexus_buffer_too_small,
+    nexus_stream_bad_mseo,
     nexus_stream_truncate,
+    nexus_stream_read_failed,
+    nexus_stream_write_failed,
     nexus_msg_invalid,
     nexus_msg_missing_field,
+    nexus_msg_unsupported,
 };
 
 #endif

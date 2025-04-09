@@ -1,4 +1,4 @@
-add_library(libnexus-rv decoder.c)
+add_library(libnexus-rv decoder.c encoder.c printer.c reader.c misc.c)
 
 target_include_directories(libnexus-rv
         PUBLIC "${PROJECT_SOURCE_DIR}/include")
