@@ -1,0 +1,4 @@
+<map id="nexusrv_msg_decoder" name="nexusrv_msg_decoder">
+<area shape="rect" id="node1" title="NexusRV Message decoder context." alt="" coords="5,95,173,121"/>
+<area shape="rect" id="node2" href="$structnexusrv__hw__cfg.html" title="NexusRV Message decoder configuration." alt="" coords="26,5,153,32"/>
+</map>
