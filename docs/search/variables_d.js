@@ -1,8 +1,9 @@
 var searchData=
 [
-  ['target_172',['target',['../structnexusrv__trace__indirect.html#ad9caca8d2502e8606ba2ac8be7aec08c',1,'nexusrv_trace_indirect']]],
-  ['tcode_173',['tcode',['../structnexusrv__msg.html#a0573f0a57c2cde9b652f6d46ddd14f4d',1,'nexusrv_msg']]],
-  ['time_5fdelta_174',['time_delta',['../structnexusrv__hist__arr__element.html#a933616b15838eaf37bd03d79fc51e02a',1,'nexusrv_hist_arr_element']]],
-  ['timestamp_175',['timestamp',['../structnexusrv__msg.html#ac98fcfc4b42c33116300b42319f3125e',1,'nexusrv_msg::timestamp()'],['../structnexusrv__trace__decoder.html#a8714c8f51b03d4cdfa0ea933aad03bc0',1,'nexusrv_trace_decoder::timestamp()']]],
-  ['ts_5fbits_176',['ts_bits',['../structnexusrv__hw__cfg.html#a4a5c08dc4eb84ef81a65234bfd975f2c',1,'nexusrv_hw_cfg']]]
+  ['src_168',['src',['../structnexusrv__msg.html#a734550999fbe59f380f44dbfbff811c7',1,'nexusrv_msg']]],
+  ['src_5fbits_169',['src_bits',['../structnexusrv__hw__cfg.html#a4b7573cb50114516a3ec442e91c4c343',1,'nexusrv_hw_cfg']]],
+  ['stop_5fcode_170',['stop_code',['../structnexusrv__msg.html#ac5f0f1169ce3eb37092d26ab036c3eca',1,'nexusrv_msg']]],
+  ['sync_171',['sync',['../structnexusrv__trace__sync.html#ad4adc95eea7654b30d34c8dacbd2cece',1,'nexusrv_trace_sync']]],
+  ['sync_5ftype_172',['sync_type',['../structnexusrv__msg.html#aa7aebbc1b31bbf3fedcb4f847e1f1a91',1,'nexusrv_msg']]],
+  ['synced_173',['synced',['../structnexusrv__trace__decoder.html#aea54892759928b6309b8081cdb8c608e',1,'nexusrv_trace_decoder']]]
 ];

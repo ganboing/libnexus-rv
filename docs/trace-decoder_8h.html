@@ -161,9 +161,6 @@ Functions</h2></td></tr>
 <tr class="memitem:abf2d47e275b0b04613cd92dc8bb62774"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="trace-decoder_8h.html#abf2d47e275b0b04613cd92dc8bb62774">nexusrv_trace_decoder_fini</a> (<a class="el" href="structnexusrv__trace__decoder.html">nexusrv_trace_decoder</a> *decoder)</td></tr>
 <tr class="memdesc:abf2d47e275b0b04613cd92dc8bb62774"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finialize the trace decoder.  <a href="trace-decoder_8h.html#abf2d47e275b0b04613cd92dc8bb62774">More...</a><br /></td></tr>
 <tr class="separator:abf2d47e275b0b04613cd92dc8bb62774"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a58c94a24c0f844f0f6c1e47f2745059b"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="trace-decoder_8h.html#a58c94a24c0f844f0f6c1e47f2745059b">nexusrv_trace_time</a> (<a class="el" href="structnexusrv__trace__decoder.html">nexusrv_trace_decoder</a> *decoder)</td></tr>
-<tr class="memdesc:a58c94a24c0f844f0f6c1e47f2745059b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get current timestamp.  <a href="trace-decoder_8h.html#a58c94a24c0f844f0f6c1e47f2745059b">More...</a><br /></td></tr>
-<tr class="separator:a58c94a24c0f844f0f6c1e47f2745059b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2320f87b2ee7bb0cbe9b34fa3df7c9ba"><td class="memItemLeft" align="right" valign="top">int32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="trace-decoder_8h.html#a2320f87b2ee7bb0cbe9b34fa3df7c9ba">nexusrv_trace_try_retire</a> (<a class="el" href="structnexusrv__trace__decoder.html">nexusrv_trace_decoder</a> *decoder, uint32_t icnt, unsigned *event)</td></tr>
 <tr class="memdesc:a2320f87b2ee7bb0cbe9b34fa3df7c9ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Try to retire <code>icnt</code> from trace.  <a href="trace-decoder_8h.html#a2320f87b2ee7bb0cbe9b34fa3df7c9ba">More...</a><br /></td></tr>
 <tr class="separator:a2320f87b2ee7bb0cbe9b34fa3df7c9ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -189,15 +186,23 @@ Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Trace decoder usage model, events, and common error codes. </p>
 <p>The main function is nexusrv_trace_try_retire. The user of the trace decoder is expected to be calling this function a lot. Assuming we are currently synchronized to a code block (a sequence of instructions without branch in between). The caller can try to retire the whole block by calling it, and see how many instructions can be successfully retired before hitting a <em>event</em>. This allows the caller to determine if there's any interrupt/exception occurred in the middle of the block, and if the Direct/Indirect branch or other expected event is pending at the end of the block. The events can then be consumed by calling the corresponding nexusrv_trace_next_x function.</p><ul>
-<li>NEXUSRV_Trace_Event_None: In BTM mode, no event pending. In HTM mode, a TNT might be pending. Use nexusrv_trace_next_tnt to retrieve it</li>
-<li>NEXUSRV_Trace_Event_Direct: Only in BTM mode, a direct branch is pending. Use nexusrv_trace_next_tnt to retrieve it</li>
-<li>NEXUSRV_Trace_Event_Indirect: Use nexusrv_trace_next_indirect</li>
-<li>NEXUSRV_Trace_Event_Sync: Use nexusrv_trace_next_sync</li>
-<li>NEXUSRV_Trace_Event_Stop: Use nexusrv_trace_next_stop</li>
-<li>NEXUSRV_Trace_Event_Error: Use nexusrv_trace_next_error</li>
+<li><b>NEXUSRV_Trace_Event_None:</b> In BTM mode, no event pending. In HTM mode, a TNT might be pending. Use nexusrv_trace_next_tnt to retrieve it</li>
+<li><b>NEXUSRV_Trace_Event_Direct:</b> Only in BTM mode, a direct branch is pending. Use nexusrv_trace_next_tnt to retrieve it</li>
+<li><b>NEXUSRV_Trace_Event_Indirect:</b> Use nexusrv_trace_next_indirect to retrieve it</li>
+<li><b>NEXUSRV_Trace_Event_Sync:</b> Use nexusrv_trace_next_sync to retrieve it</li>
+<li><b>NEXUSRV_Trace_Event_Stop:</b> Use nexusrv_trace_next_stop to retrieve it</li>
+<li><b>NEXUSRV_Trace_Event_Error:</b> Use nexusrv_trace_next_error to retrieve it</li>
 </ul>
-<p>Errror handling: Trace decoder returns error codes at 3 levels:</p><ul>
-<li>-nexus_stream_x: error fetching Message from trace file. This is a hard error and decoding should be aborted. </li>
+<p>Error handling: For all the hard errors listed below, decoding should be aborted, and the only thing the caller can do is to free the trace decoder by calling nexusrv_trace_decoder_fini.<br  />
+Trace decoder returns error codes at different levels:</p><ul>
+<li><b>-nexus_no_mem:</b> Failed to allocate memory. This is a <b>hard</b> error.</li>
+<li><b>-nexus_stream_bad_mseo</b>, <b>-nexus_stream_truncate</b>, <b>-nexus_stream_read_failed:</b> Failed to fetch Message from trace file. It's reported by the Message decoder. This is a <b>hard</b> error.</li>
+<li><b>-nexus_msg_invalid</b>, <b>-nexus_msg_missing_field:</b> Failed to decoder the Message from trace file. It's reported by the Message decoder. This is a <b>hard</b> error.</li>
+<li><b>-nexus_msg_unsupported:</b> The Message is unsupported by the trace decoder. The caller can resolve the situation by handling Message itself. (via nexusrv_msg_decoder_next) Once the Message is consumed, it can retry the trace decoder function.</li>
+<li><b>-nexus_trace_eof:</b> Expecting to decode more Messages, but there's no Message left. Decoding should be terminated. This is expected when the trace has been terminated, with or without a stop event.</li>
+<li><b>-nexus_trace_not_synced:</b> Trace decoder hasn't been synced. The trace decoder must be synced once before calling try_retire and next_x(). The next_stop() and next_error() will also desync the decoder if returned success, and decoder should be synced again.</li>
+<li><b>-nexus_trace_hist_overflow</b>, <b>-nexus_trace_icnt_overflow:</b> There are too many HIST or I-CNT ResourceFull Messages being consumed, and exceeds the capability of the trace decoder. This is a <b>hard</b> error</li>
+<li><b>nexus_trace_mismatch:</b> This happens when the caller tries to get certain event (branch,sync...), but there's no such event pending. It typically means the caller is misusing the trace decoder. </li>
 </ul>
 </div><h2 class="groupheader">Typedef Documentation</h2>
 <a id="ada8ef96e9f39f946e2a9e144fc769e5c"></a>
@@ -560,34 +565,6 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-
-</div>
-</div>
-<a id="a58c94a24c0f844f0f6c1e47f2745059b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a58c94a24c0f844f0f6c1e47f2745059b">&#9670;&nbsp;</a></span>nexusrv_trace_time()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">uint64_t nexusrv_trace_time </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="structnexusrv__trace__decoder.html">nexusrv_trace_decoder</a> *&#160;</td>
-          <td class="paramname"><em>decoder</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get current timestamp. </p>
-<p>Returns the current time tracked by the decoder. The time is the timestamp the last Message was retired. For Messages with hrepeat, effectively it'll be retired (hrepeat + 1) times, and the delta time is divided by (hrepeat + 1).</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">decoder</td><td>The decoder context </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>The timestamp </dd></dl>
 
 </div>
 </div>
