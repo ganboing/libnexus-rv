@@ -1,6 +1,6 @@
 // SPDX-License-Identifer: Apache 2.0
 /*
- * msg-types.h - Nexus-RV message definitions
+ * msg-types.h - NexusRV message definitions
  *
  *  Copyright (C) 2025, Bo Gan <ganboing@gmail.com>
  */
@@ -10,281 +10,249 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
+/** @file */
 
-#define NEXUS_RV_FIELD_TIME_SRC \
-struct {                        \
-    uint64_t timestamp : 54;    \
-    uint64_t source : 10;       \
-}
-
-#define NEXUS_RV_BITS_ADDR_SYNC 4
-#define NEXUS_RV_FIELD_XADDR_SYNC   \
-struct {                            \
-    uint64_t faddr : 58;            \
-    uint64_t sync: 4;               \
-}
-
-#define NEXUS_RV_BITS_ADDR_BTYPE 2
-#define NEXUS_RV_FIELD_XADDR_BTYPE  \
-struct {                            \
-    uint64_t uaddr : 58;            \
-    uint64_t : 4;                   \
-    uint64_t btype : 2;             \
-}
-
-#define NEXUS_RV_FIELD_XADDR_SYNC_BTYPE \
-struct {                                \
-    uint64_t faddr : 58;                \
-    uint64_t sync : 4;                  \
-    uint64_t btype : 2;                 \
-}
-
+/** Number of TCODE bits */
 #define NEXUS_RV_BITS_TCODE 6
-#define NEXUS_RV_FIELD_TCODE    \
-struct {                        \
-    uint8_t tcode: 6;           \
-}
-
+/** Number of ETYPE bits */
 #define NEXUS_RV_BITS_ETYPE 4
-#define NEXUS_RV_FIELD_TCODE_ETYPE  \
-struct {                            \
-    uint32_t tcode : 6;             \
-    uint32_t etype : 4;             \
-}
-
-#define NEXUS_RV_FIELD_TCODE_ICNT   \
-struct {                            \
-    uint32_t tcode : 6;             \
-    uint32_t : 4;                   \
-    uint32_t icnt : 22;             \
-}
-
-#define NEXUS_RV_FIELD_TCODE_REPEAT \
-struct {                            \
-    uint32_t tcode : 6;             \
-    uint32_t : 4;                   \
-    uint32_t hrepeat : 18;          \
-}
-
-#define NEXUS_RV_BITS_EVCODE 4
-#define NEXUS_RV_BITS_CDF 2
-#define NEXUS_RV_FIELD_TCODE_ICNT_EVCODE    \
-struct {                                    \
-    uint32_t tcode : 6;                     \
-    uint32_t evcode : 4;                    \
-    uint32_t icnt : 22;                     \
-}
-
+/** Number of RCODE bits */
 #define NEXUS_RV_BITS_RCODE 4
-#define NEXUS_RV_FIELD_TCODE_ICNT_RCODE_REPEAT  \
-union {                                         \
-    struct {                                    \
-        uint32_t tcode : 6;                     \
-        uint32_t rcode : 4;                     \
-    };                                          \
-    struct {                                    \
-        uint32_t : 10;                          \
-        uint32_t icnt : 22;                     \
-    };                                          \
-    struct {                                    \
-        uint32_t : 10;                          \
-        uint32_t hrepeat : 18;                  \
-    };                                          \
-}
-
+/** Number of EVCODE bits */
+#define NEXUS_RV_BITS_EVCODE 4
+/** Number of CDF bits */
+#define NEXUS_RV_BITS_CDF 2
+/** Number of SYNC bits */
+#define NEXUS_RV_BITS_ADDR_SYNC 4
+/** Number of B-TYPE bits */
+#define NEXUS_RV_BITS_ADDR_BTYPE 2
+/** Number of PROCESS.FORMAT bits */
 #define NEXUS_RV_BITS_OWNERSHIP_FMT 2
+/** Number of PROCESS.PRV bits */
 #define NEXUS_RV_BITS_OWNERSHIP_PRV 2
+/** Number of PROCESS.V bits */
 #define NEXUS_RV_BITS_OWNERSHIP_V 1
-#define NEXUS_RV_FIELD_OWNERSHIP    \
-struct {                            \
-    uint8_t format : 2;             \
-    uint8_t prv : 2;                \
-    uint8_t v : 1;                  \
-}
 
-typedef struct nexusrv_msg_common {
-    NEXUS_RV_FIELD_TIME_SRC;
-    NEXUS_RV_FIELD_TCODE;
-} nexusrv_msg_common;
-
-typedef struct nexusrv_msg_ownership{
-    NEXUS_RV_FIELD_TIME_SRC;
-    NEXUS_RV_FIELD_TCODE;
-    NEXUS_RV_FIELD_OWNERSHIP;
-    uint64_t context;
-} nexusrv_msg_ownership;
-#undef NEXUS_RV_FIELD_TCODE
-#undef NEXUS_RV_FIELD_OWNERSHIP
-
-typedef struct nexusrv_msg_dirbr {
-    NEXUS_RV_FIELD_TIME_SRC;
-    NEXUS_RV_FIELD_TCODE_ICNT;
-} nexusrv_msg_dirbr;
-
-typedef struct nexusrv_msg_indirbr {
-    NEXUS_RV_FIELD_TIME_SRC;
-    NEXUS_RV_FIELD_TCODE_ICNT;
-    NEXUS_RV_FIELD_XADDR_BTYPE;
-} nexusrv_msg_indirbr;
-
-typedef struct nexusrv_msg_prog_sync {
-    NEXUS_RV_FIELD_TIME_SRC;
-    NEXUS_RV_FIELD_TCODE_ICNT;
-    NEXUS_RV_FIELD_XADDR_SYNC;
-} nexusrv_msg_prog_sync;
-
-typedef nexusrv_msg_prog_sync nexusrv_msg_dirbr_sync;
-
-typedef struct nexusrv_msg_indirbr_sync {
-    NEXUS_RV_FIELD_TIME_SRC;
-    NEXUS_RV_FIELD_TCODE_ICNT;
-    NEXUS_RV_FIELD_XADDR_SYNC_BTYPE;
-} nexusrv_msg_indirbr_sync;
-
-typedef struct nexusrv_msg_indirbr_hist {
-    NEXUS_RV_FIELD_TIME_SRC;
-    NEXUS_RV_FIELD_TCODE_ICNT;
-    uint32_t hist;
-    NEXUS_RV_FIELD_XADDR_BTYPE;
-} nexusrv_msg_indirbr_hist;
-
-typedef struct nexusrv_msg_indirbr_hist_sync {
-    NEXUS_RV_FIELD_TIME_SRC;
-    NEXUS_RV_FIELD_TCODE_ICNT;
-    uint32_t hist;
-    NEXUS_RV_FIELD_XADDR_SYNC_BTYPE;
-} nexusrv_msg_indirbr_hist_sync;
-#undef NEXUS_RV_FIELD_TCODE_ICNT
-#undef NEXUS_RV_FIELD_XADDR_SYNC
-#undef NEXUS_RV_FIELD_XADDR_BTYPE
-#undef NEXUS_RV_FIELD_XADDR_SYNC_BTYPE
-
-typedef struct nexusrv_msg_resource_full {
-    NEXUS_RV_FIELD_TIME_SRC;
-    NEXUS_RV_FIELD_TCODE_ICNT_RCODE_REPEAT;
-    union {
-        uint32_t hist;
-        uint32_t rdata;
-    };
-} nexusrv_msg_resource_full;
-#undef NEXUS_RV_FIELD_TCODE_ICNT_RCODE_REPEAT
-
-typedef struct nexusrv_msg_repeat_br {
-    NEXUS_RV_FIELD_TIME_SRC;
-    NEXUS_RV_FIELD_TCODE_REPEAT;
-} nexusrv_msg_repeat_br;
-#undef NEXUS_RV_FIELD_TCODE_REPEAT
-
-typedef struct nexusrv_msg_prog_corr {
-    NEXUS_RV_FIELD_TIME_SRC;
-    NEXUS_RV_FIELD_TCODE_ICNT_EVCODE;
-    uint32_t hist;
-} nexusrv_msg_prog_corr;
-#undef NEXUS_RV_FIELD_TCODE_ICNT_EVCODE
-
-typedef struct nexusrv_msg_error {
-    NEXUS_RV_FIELD_TIME_SRC;
-    NEXUS_RV_FIELD_TCODE_ETYPE;
-    uint32_t ecode;
-} nexusrv_msg_error;
-#undef NEXUS_RV_FIELD_TCODE_ETYPE
-#undef NEXUS_RV_FIELD_TIME_SRC
-
-/* Nexus-RV Msg types */
-typedef union nexusrv_msg {
-    nexusrv_msg_common common;
-    nexusrv_msg_ownership ownership;
-    nexusrv_msg_dirbr dirbr;
-    nexusrv_msg_indirbr indirbr;
-    nexusrv_msg_dirbr_sync dirbr_sync;
-    nexusrv_msg_indirbr_sync indirbr_sync;
-    nexusrv_msg_indirbr_hist indirbr_hist;
-    nexusrv_msg_indirbr_hist_sync indirbr_hist_sync;
-    nexusrv_msg_resource_full resource_full;
-    nexusrv_msg_prog_sync prog_sync;
-    nexusrv_msg_prog_corr prog_corr;
-    nexusrv_msg_repeat_br repeat_br;
-    nexusrv_msg_error error;
-} nexusrv_msg;
-
-enum nexus_rv_tcodes {
-    NENUSRV_TCODE_OWNERSHIP             = 2,
-    NEXUSRV_TCODE_DIRBR                 = 3,
-    NEXUSRV_TCODE_INDIRBR               = 4,
-    NEXUSRV_TCODE_ERROR                 = 8,
-    NEXUSRV_TCODE_PROG_SYNC             = 9,
-    NEXUSRV_TCODE_DIRBR_SYNC            = 11,
-    NEXUSRV_TCODE_INDIRBR_SYNC          = 12,
-    NEXUSRV_TCODE_RESOURCE_FULL         = 27,
-    NEXUSRV_TCODE_INDIRBR_HIST          = 28,
-    NEXUSRV_TCODE_INDIRBR_HIST_SYNC     = 29,
-    NEXUSRV_TCODE_REPEAT_BR             = 30,
-    NEXUSRV_TCODE_PROG_CORR             = 33,
-    NEXUSRV_TCODE_IDLE                  = 63,
+/** @brief TCODE enumeration
+ */
+enum nexusrv_tcodes {
+    NEXUSRV_TCODE_Ownership                 = 2,
+    NEXUSRV_TCODE_DirectBranch              = 3,
+    NEXUSRV_TCODE_IndirectBranch            = 4,
+    NEXUSRV_TCODE_Error                     = 8,
+    NEXUSRV_TCODE_ProgTraceSync             = 9,
+    NEXUSRV_TCODE_DirectBranchSync          = 11,
+    NEXUSRV_TCODE_IndirectBranchSync        = 12,
+    NEXUSRV_TCODE_ResourceFull              = 27,
+    NEXUSRV_TCODE_IndirectBranchHist        = 28,
+    NEXUSRV_TCODE_IndirectBranchHistSync    = 29,
+    NEXUSRV_TCODE_RepeatBranch              = 30,
+    NEXUSRV_TCODE_ProgTraceCorrelation      = 33,
+    NEXUSRV_TCODE_VendorStart               = 56,
+    NEXUSRV_TCODE_VendorLast                = 62,
+    NEXUSRV_TCODE_Idle                      = 63,
 };
 
-static inline const char* nexusrv_tcode_str(enum nexus_rv_tcodes tcode) {
+static inline const char* nexusrv_tcode_str(enum nexusrv_tcodes tcode) {
     switch (tcode) {
-        case NENUSRV_TCODE_OWNERSHIP:
+        case NEXUSRV_TCODE_Ownership:
             return "Ownership";
-        case NEXUSRV_TCODE_DIRBR:
+        case NEXUSRV_TCODE_DirectBranch:
             return "DirectBranch";
-        case NEXUSRV_TCODE_INDIRBR:
+        case NEXUSRV_TCODE_IndirectBranch:
             return "IndirectBranch";
-        case NEXUSRV_TCODE_ERROR:
+        case NEXUSRV_TCODE_Error:
             return "Error";
-        case NEXUSRV_TCODE_PROG_SYNC:
+        case NEXUSRV_TCODE_ProgTraceSync:
             return "ProgTraceSync";
-        case NEXUSRV_TCODE_DIRBR_SYNC:
+        case NEXUSRV_TCODE_DirectBranchSync:
             return "DirectBranchSync";
-        case NEXUSRV_TCODE_INDIRBR_SYNC:
+        case NEXUSRV_TCODE_IndirectBranchSync:
             return "IndirectBranchSync";
-        case NEXUSRV_TCODE_RESOURCE_FULL:
+        case NEXUSRV_TCODE_ResourceFull:
             return "ResourceFull";
-        case NEXUSRV_TCODE_INDIRBR_HIST:
+        case NEXUSRV_TCODE_IndirectBranchHist:
             return "IndirectBranchHist";
-        case NEXUSRV_TCODE_INDIRBR_HIST_SYNC:
+        case NEXUSRV_TCODE_IndirectBranchHistSync:
             return "IndirectBranchHistSync";
-        case NEXUSRV_TCODE_REPEAT_BR:
+        case NEXUSRV_TCODE_RepeatBranch:
             return "RepeatBranch";
-        case NEXUSRV_TCODE_PROG_CORR:
+        case NEXUSRV_TCODE_ProgTraceCorrelation:
             return "ProgTraceCorrelation";
-        case NEXUSRV_TCODE_IDLE:
+        case NEXUSRV_TCODE_Idle:
             return "Idle";
         default:
             return "Unknown";
     }
 }
 
-static inline size_t nexusrv_msg_sz(const nexusrv_msg *msg) {
-    switch (msg->common.tcode) {
-        case NENUSRV_TCODE_OWNERSHIP:
-            return sizeof(nexusrv_msg_ownership);
-        case NEXUSRV_TCODE_DIRBR:
-            return sizeof(nexusrv_msg_dirbr);
-        case NEXUSRV_TCODE_INDIRBR:
-            return sizeof(nexusrv_msg_indirbr);
-        case NEXUSRV_TCODE_ERROR:
-            return sizeof(nexusrv_msg_error);
-        case NEXUSRV_TCODE_PROG_SYNC:
-            return sizeof(nexusrv_msg_prog_sync);
-        case NEXUSRV_TCODE_DIRBR_SYNC:
-            return sizeof(nexusrv_msg_dirbr_sync);
-        case NEXUSRV_TCODE_INDIRBR_SYNC:
-            return sizeof(nexusrv_msg_indirbr_sync);
-        case NEXUSRV_TCODE_RESOURCE_FULL:
-            return sizeof(nexusrv_msg_resource_full);
-        case NEXUSRV_TCODE_INDIRBR_HIST:
-            return sizeof(nexusrv_msg_indirbr_hist);
-        case NEXUSRV_TCODE_INDIRBR_HIST_SYNC:
-            return sizeof(nexusrv_msg_indirbr_hist_sync);
-        case NEXUSRV_TCODE_REPEAT_BR:
-            return sizeof(nexusrv_msg_repeat_br);
-        case NEXUSRV_TCODE_PROG_CORR:
-            return sizeof(nexusrv_msg_prog_corr);
+/** @brief Decoded NexusRV Message
+ */
+typedef struct nexusrv_msg {
+    uint64_t timestamp; /*!< Absolute or Delta timestamp of the Message */
+    uint16_t src;       /*!< SRC field */
+    uint8_t tcode;      /*!< TCODE field */
+    union {
+        struct {
+            uint8_t sync_type : 4;   /*!< SYNC field */
+            uint8_t branch_type : 2; /*!< B-TYPE field */
+        };
+        struct {
+            uint8_t error_type : 4;  /*!< ETYPE field */
+        };
+        struct {
+            uint8_t res_code : 4;    /*!< RCODE field */
+        };
+        struct {
+            uint8_t stop_code : 4;   /*!< EVCODE field */
+            uint8_t cdf : 2;         /*!< CDF field */
+        };
+        struct {
+            uint8_t ownership_fmt : 2;  /*!< PROCESS.FORMAT field */
+            uint8_t ownership_priv : 2; /*!< PROCESS.PRV field */
+            uint8_t ownership_v : 1;    /*!< PROCESS.V field */
+        };
+    };
+    union {
+        uint32_t icnt;        /*!< I-CNT field */
+        uint32_t error_code;  /*!< ECODE field */
+        uint32_t res_data;    /*!< RDATA field */
+    };
+    uint32_t hist;     /*!< HIST field */
+    uint32_t hrepeat;  /*!< HREPEAT field, or synthesized  HREPEAT */
+    union {
+        uint64_t xaddr;   /*!< x-ADDR */
+        uint64_t context; /*!< PROCESS.CONTEXT */
+    };
+} nexusrv_msg;
+
+static inline bool nexusrv_msg_known(const nexusrv_msg *msg) {
+    switch (msg->tcode) {
+        case NEXUSRV_TCODE_Idle:
+        case NEXUSRV_TCODE_ResourceFull:
+        case NEXUSRV_TCODE_DirectBranch:
+        case NEXUSRV_TCODE_DirectBranchSync:
+        case NEXUSRV_TCODE_IndirectBranch:
+        case NEXUSRV_TCODE_IndirectBranchSync:
+        case NEXUSRV_TCODE_IndirectBranchHist:
+        case NEXUSRV_TCODE_IndirectBranchHistSync:
+        case NEXUSRV_TCODE_RepeatBranch:
+        case NEXUSRV_TCODE_Error:
+        case NEXUSRV_TCODE_Ownership:
+        case NEXUSRV_TCODE_ProgTraceSync:
+            return true;
+        case NEXUSRV_TCODE_ProgTraceCorrelation:
+            return msg->cdf < 2;
         default:
-            return sizeof(nexusrv_msg_common);
+            return false;
     }
+}
+
+static inline bool nexusrv_msg_idle(const nexusrv_msg *msg) {
+    return msg->tcode == NEXUSRV_TCODE_Idle;
+}
+
+static inline bool nexusrv_msg_has_src(const nexusrv_msg *msg) {
+    return !nexusrv_msg_idle(msg);
+}
+
+static inline bool nexusrv_msg_is_branch(const nexusrv_msg *msg) {
+    switch (msg->tcode) {
+        case NEXUSRV_TCODE_DirectBranch:
+        case NEXUSRV_TCODE_DirectBranchSync:
+        case NEXUSRV_TCODE_IndirectBranch:
+        case NEXUSRV_TCODE_IndirectBranchSync:
+        case NEXUSRV_TCODE_IndirectBranchHist:
+        case NEXUSRV_TCODE_IndirectBranchHistSync:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static inline bool nexusrv_msg_is_indir_branch(const nexusrv_msg *msg) {
+    switch (msg->tcode) {
+        case NEXUSRV_TCODE_IndirectBranch:
+        case NEXUSRV_TCODE_IndirectBranchSync:
+        case NEXUSRV_TCODE_IndirectBranchHist:
+        case NEXUSRV_TCODE_IndirectBranchHistSync:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static inline bool nexusrv_msg_is_res(const nexusrv_msg *msg) {
+    return msg->tcode == NEXUSRV_TCODE_ResourceFull;
+}
+
+static inline bool nexusrv_msg_is_sync(const nexusrv_msg *msg) {
+    switch (msg->tcode) {
+        case NEXUSRV_TCODE_DirectBranchSync:
+        case NEXUSRV_TCODE_IndirectBranchSync:
+        case NEXUSRV_TCODE_IndirectBranchHistSync:
+        case NEXUSRV_TCODE_ProgTraceSync:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static inline bool nexusrv_msg_has_icnt(const nexusrv_msg *msg) {
+    switch (msg->tcode) {
+        case NEXUSRV_TCODE_ResourceFull:
+            return !msg->res_code;
+        case NEXUSRV_TCODE_DirectBranch:
+        case NEXUSRV_TCODE_DirectBranchSync:
+        case NEXUSRV_TCODE_IndirectBranch:
+        case NEXUSRV_TCODE_IndirectBranchSync:
+        case NEXUSRV_TCODE_IndirectBranchHist:
+        case NEXUSRV_TCODE_IndirectBranchHistSync:
+        case NEXUSRV_TCODE_ProgTraceSync:
+        case NEXUSRV_TCODE_ProgTraceCorrelation:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static inline bool nexusrv_msg_has_xaddr(const nexusrv_msg *msg) {
+    switch (msg->tcode) {
+        case NEXUSRV_TCODE_IndirectBranch:
+        case NEXUSRV_TCODE_IndirectBranchSync:
+        case NEXUSRV_TCODE_IndirectBranchHist:
+        case NEXUSRV_TCODE_IndirectBranchHistSync:
+        case NEXUSRV_TCODE_DirectBranchSync:
+        case NEXUSRV_TCODE_ProgTraceSync:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static inline bool nexusrv_msg_has_hist(const nexusrv_msg *msg) {
+    switch (msg->tcode) {
+        case NEXUSRV_TCODE_ResourceFull:
+            return msg->res_code == 1 || msg->res_code == 2;
+        case NEXUSRV_TCODE_ProgTraceCorrelation:
+            return msg->cdf == 1;
+        case NEXUSRV_TCODE_IndirectBranchHist:
+        case NEXUSRV_TCODE_IndirectBranchHistSync:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static inline bool nexusrv_msg_known_rescode(uint8_t rescode) {
+    return rescode < 3;
+}
+
+static inline unsigned nexusrv_msg_hist_bits(uint32_t hist) {
+    if (!hist)
+        return 0;
+    return sizeof(long) * 8 - 1 - __builtin_clzl(hist);
 }
 
 #endif

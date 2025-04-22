@@ -1,4 +1,11 @@
-add_library(libnexus-rv decoder.c encoder.c printer.c reader.c misc.c)
+add_library(libnexus-rv
+        msg-decoder.c
+        msg-encoder.c
+        msg-printer.c
+        msg-reader.c
+        trace-decoder.c
+        hist-array.cpp
+        misc.c )
 
 target_include_directories(libnexus-rv
         PUBLIC "${PROJECT_SOURCE_DIR}/include")

@@ -10,15 +10,54 @@
 
 enum nexus_error {
     nexus_ok,
-    nexus_fail,
+    nexus_no_mem,
     nexus_buffer_too_small,
     nexus_stream_bad_mseo,
     nexus_stream_truncate,
     nexus_stream_read_failed,
-    nexus_stream_write_failed,
     nexus_msg_invalid,
     nexus_msg_missing_field,
     nexus_msg_unsupported,
+    nexus_trace_eof,
+    nexus_trace_not_synced,
+    nexus_trace_hist_overflow,
+    nexus_trace_icnt_overflow,
+    nexus_trace_mismatch,
 };
+
+static inline const char *str_nexus_error(enum nexus_error err) {
+    switch (err) {
+        case nexus_ok:
+            return "nexus_ok";
+        case nexus_no_mem:
+            return "nexus_no_mem";
+        case nexus_buffer_too_small:
+            return "nexus_buffer_too_small";
+        case nexus_stream_bad_mseo:
+            return "nexus_stream_bad_mseo";
+        case nexus_stream_truncate:
+            return "nexus_stream_truncate";
+        case nexus_stream_read_failed:
+            return "nexus_stream_read_failed";
+        case nexus_msg_invalid:
+            return "nexus_msg_invalid";
+        case nexus_msg_missing_field:
+            return "nexus_msg_missing_field";
+        case nexus_msg_unsupported:
+            return "nexus_msg_unsupported";
+        case nexus_trace_eof:
+            return "nexus_trace_eof";
+        case nexus_trace_not_synced:
+            return "nexus_trace_not_synced";
+        case nexus_trace_hist_overflow:
+            return "nexus_trace_hist_overflow";
+        case nexus_trace_icnt_overflow:
+            return "nexus_trace_icnt_overflow";
+        case nexus_trace_mismatch:
+            return "nexus_trace_mismatch";
+        default:
+            return "(unknown)";
+    }
+}
 
 #endif

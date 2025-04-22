@@ -10,4 +10,8 @@
 
 ssize_t seek_pipe(int fd, size_t skip);
 
+ssize_t seek_file(int fd, size_t offset);
+
+int open_seek_file(char *filename, int oflags);
+
 #endif
