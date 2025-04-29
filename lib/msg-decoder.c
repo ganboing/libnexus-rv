@@ -243,7 +243,7 @@ ssize_t nexusrv_msg_decoder_next(nexusrv_msg_decoder *decoder,
                                     nexusrv_msg *msg) {
     assert(decoder->pos <= decoder->filled);
     assert(decoder->filled <= decoder->bufsz);
-    ssize_t rc;
+    ssize_t carry, rc;
     decoder->lastmsg_len = 0;
     if (decoder->pos == decoder->filled) {
         if (decoder->pos)
@@ -274,7 +274,7 @@ ssize_t nexusrv_msg_decoder_next(nexusrv_msg_decoder *decoder,
     if (!decoder->pos)
         return -nexus_buffer_too_small;
 read_buffer:
-    size_t carry = decoder->filled - decoder->pos;
+    carry = decoder->filled - decoder->pos;
     memmove(decoder->buffer, decoder->buffer + decoder->bufsz - carry, carry);
     decoder->nread += decoder->pos;
     decoder->pos = 0;

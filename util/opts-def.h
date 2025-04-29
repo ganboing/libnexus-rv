@@ -47,6 +47,24 @@
             prefix = optarg;                        \
             break;
 
+#define OPT_PARSE_U_UCORE                           \
+        case 'u':                                   \
+            user_core_files.emplace_back(           \
+                make_shared<linuxcore>(optarg,      \
+                    sysroot_dirs, dbg_dirs));       \
+            vm->load_core(user_core_files.back());  \
+            break;
+
+#define OPT_PARSE_R_SYSROOT                         \
+        case 'r':                                   \
+            sysroot_dirs = split_dirs(optarg);      \
+            break;
+
+#define OPT_PARSE_D_DEBUGDIR                        \
+        case 'd':                                   \
+            dbg_dirs = split_dirs(optarg);          \
+            break;
+
 #define OPT_PARSE_END                               \
         default:                                    \
             return 1;                               \

@@ -1,0 +1,29 @@
+#!/bin/bash
+
+set -eu
+set -o pipefail
+
+D="$(readlink -f "$(dirname "$0")")"
+
+source "$D/cmd.bash"
+source "$D/common.bash"
+
+cd "$D/../thirdparty/capstone"
+
+build() {
+  local type="$1"
+  shift
+  run_cmd rm -rf "cmake-build-$type"
+  run_cmd mkdir  "cmake-build-$type"
+  run_cmd cmake -B "cmake-build-$type" "$@" \
+    "-DCMAKE_INSTALL_PREFIX=$INSTALLROOT" \
+    "-DCAPSTONE_ARCHITECTURE_DEFAULT=OFF" \
+    "-DCAPSTONE_RISCV_SUPPORT=ON" \
+    "-DBUILD_SHARED_LIBS=ON" \
+    .
+  run_cmd make -C "cmake-build-$type" -j $(nproc) install
+  run_cmd rm -rf "cmake-build-$type"
+}
+
+eval "opts=( ${CMAKE_BUILD_OPTS["$BUILDTYPE"]} )"
+build "$BUILDTYPE" "${opts[@]}"

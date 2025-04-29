@@ -112,7 +112,8 @@ static bool nexusrv_trace_consume_tnt(nexusrv_trace_decoder *decoder) {
         assert(hist_bits > decoder->consumed_tnts);
         ++decoder->consumed_tnts;
         // HIST bits goes from MSB -> LSB
-        return (decoder->msg.hist & (1UL << decoder->consumed_tnts)) != 0;
+        return (decoder->msg.hist &
+            (1UL << (hist_bits - decoder->consumed_tnts))) != 0;
         // Do not retire the Msg, therefore, no need to reset consumed_tnts
     }
     assert(nexusrv_hist_array_size(decoder->res_hists));
@@ -122,7 +123,8 @@ static bool nexusrv_trace_consume_tnt(nexusrv_trace_decoder *decoder) {
     assert(hist_bits > decoder->consumed_tnts);
     ++decoder->consumed_tnts;
     // HIST bits goes from MSB -> LSB
-    bool tnt = (element->hist & (1UL << decoder->consumed_tnts)) != 0;
+    bool tnt = (element->hist &
+            (1UL << (hist_bits - decoder->consumed_tnts))) != 0;
     if (hist_bits != decoder->consumed_tnts)
         return tnt;
     decoder->consumed_tnts = 0;
@@ -227,6 +229,8 @@ static void nexusrv_trace_retire_msg(nexusrv_trace_decoder *decoder) {
             decoder->timestamp = decoder->msg.timestamp;
             // Downgrade to ProgTraceSync, but do not retire it yet
             decoder->msg.tcode = NEXUSRV_TCODE_ProgTraceSync;
+            decoder->msg.icnt = 0;
+            decoder->msg.hist = 0;
         } else {
             nexusrv_trace_retire_timestamp(decoder,
                                            &decoder->msg.timestamp,
@@ -241,6 +245,7 @@ static void nexusrv_trace_retire_msg(nexusrv_trace_decoder *decoder) {
     if (nexusrv_msg_is_sync(&decoder->msg)) {
         decoder->timestamp = decoder->msg.timestamp;
         decoder->full_addr = decoder->msg.xaddr;
+        nexusrv_retstack_clear(&decoder->return_stack);
     } else
         nexusrv_trace_retire_timestamp(decoder,
                                        &decoder->msg.timestamp,
@@ -309,7 +314,9 @@ int32_t nexusrv_trace_try_retire(nexusrv_trace_decoder *decoder,
                nexusrv_msg_hist_bits(decoder->msg.hist));
     if (nexusrv_msg_is_branch(&decoder->msg))
         *event = nexusrv_msg_is_indir_branch(&decoder->msg) ?
-                 NEXUSRV_Trace_Event_Indirect :
+                 (decoder->msg.branch_type ?
+                    NEXUSRV_Trace_Event_Trap :
+                    NEXUSRV_Trace_Event_Indirect) :
                  NEXUSRV_Trace_Event_Direct;
     else if (nexusrv_msg_is_sync(&decoder->msg))
         *event = NEXUSRV_Trace_Event_Sync;
@@ -346,6 +353,23 @@ int nexusrv_trace_next_tnt(nexusrv_trace_decoder *decoder) {
     return true;
 }
 
+void nexusrv_trace_push_call(nexusrv_trace_decoder* decoder,
+                             uint64_t callsite) {
+    nexusrv_retstack_push(&decoder->return_stack, callsite);
+}
+
+int nexusrv_trace_pop_ret(nexusrv_trace_decoder* decoder,
+                          uint64_t *callsite) {
+    if (!nexusrv_retstack_used(&decoder->return_stack))
+        return -nexus_trace_retstack_empty;
+    *callsite = nexusrv_retstack_pop(&decoder->return_stack);
+    return 1;
+}
+
+unsigned nexusrv_trace_callstack_used(nexusrv_trace_decoder* decoder) {
+    return nexusrv_retstack_used(&decoder->return_stack);
+}
+
 int nexusrv_trace_next_indirect(nexusrv_trace_decoder *decoder,
                                 nexusrv_trace_indirect *indir) {
     if (!decoder->synced)
@@ -365,7 +389,7 @@ int nexusrv_trace_next_indirect(nexusrv_trace_decoder *decoder,
         decoder->full_addr ^= decoder->msg.xaddr;
         decoder->msg.xaddr = 0;
     }
-    indir->target = decoder->full_addr;
+    indir->target = decoder->full_addr << 1;
     indir->exception = 0;
     indir->interrupt = 0;
     switch (decoder->msg.branch_type) {
@@ -411,7 +435,7 @@ int nexusrv_trace_next_sync(nexusrv_trace_decoder *decoder, nexusrv_trace_sync *
         nexusrv_msg_is_branch(&decoder->msg))
         return -nexus_trace_mismatch;
     sync->sync = decoder->msg.sync_type;
-    sync->addr = decoder->msg.xaddr;
+    sync->addr = decoder->msg.xaddr << 1;
     nexusrv_trace_retire_msg(decoder);
     return 1;
 }

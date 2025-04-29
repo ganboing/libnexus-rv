@@ -22,10 +22,11 @@ enum nexus_error {
     nexus_trace_not_synced,
     nexus_trace_hist_overflow,
     nexus_trace_icnt_overflow,
+    nexus_trace_retstack_empty,
     nexus_trace_mismatch,
 };
 
-static inline const char *str_nexus_error(enum nexus_error err) {
+static inline const char *str_nexus_error(int err) {
     switch (err) {
         case nexus_ok:
             return "nexus_ok";

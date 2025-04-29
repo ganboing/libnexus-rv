@@ -3,6 +3,8 @@
 
 #include "msg-decoder.h"
 #include "hist-array.h"
+#include "return-stack.h"
+
 /**
  * @file
  * @brief Trace decoder usage model, events, and common error codes
@@ -49,10 +51,8 @@
  *   Once the Message is consumed, it can retry the trace decoder function.
  * * \b -nexus_trace_eof:
  *   Expecting to decode more Messages, but there's no Message left. Decoding
- *   should be terminated. For nexusrv_trace_sync_reset, it means there's no
- *   more Sync events, and trace has been fully stopped. (Not an error). For
- *   all other decoder functions, it typically means the captured trace buffer
- *   is incomplete or truncated, a \b hard error.
+ *   should be terminated. This is expected when the trace has been terminated,
+ *   with or without a stop event.
  * * \b -nexus_trace_not_synced:
  *   Trace decoder hasn't been synced. The trace decoder must be synced once
  *   before calling try_retire and next_x(). The next_stop() and next_error()
@@ -116,6 +116,7 @@ typedef struct nexusrv_trace_stop {
 enum nexusrv_trace_events {
     NEXUSRV_Trace_Event_None,
     NEXUSRV_Trace_Event_Direct,
+    NEXUSRV_Trace_Event_Trap,
     NEXUSRV_Trace_Event_Indirect,
     NEXUSRV_Trace_Event_Sync,
     NEXUSRV_Trace_Event_Stop,
@@ -142,6 +143,8 @@ typedef struct nexusrv_trace_decoder {
     nexusrv_msg msg;        /*!< The buffered Message */
     uint64_t full_addr;     /*!< Address tracking */
     uint64_t timestamp;     /*!< Timestamp tracking */
+    nexusrv_return_stack return_stack; /*!< Return stack tracking */
+
 } nexusrv_trace_decoder;
 
 /** @brief Initialize the trace decoder
@@ -203,7 +206,7 @@ static inline uint64_t nexusrv_trace_time(nexusrv_trace_decoder* decoder) {
  *    None or potentially a TNT (in HTM mode). \n
  *  NEXUSRV_Trace_Event_Direct:
  *    Direct branch, use nexusrv_trace_next_tnt to retrieve \n
- *  NEXUSRV_Trace_Event_Indirect:
+ *  NEXUSRV_Trace_Event_Trap, NEXUSRV_Trace_Event_Indirect:
  *    Indirect branch, use nexusrv_trace_next_indirect to retrieve \n
  *  NEXUSRV_Trace_Event_Sync:
  *    Sync event, use nexusrv_trace_next_sync to retrieve \n
@@ -248,6 +251,14 @@ int nexusrv_trace_sync_reset(nexusrv_trace_decoder* decoder,
  * @retval <0: Error occurred, refer to common errors section
  */
 int nexusrv_trace_next_tnt(nexusrv_trace_decoder *decoder);
+
+void nexusrv_trace_push_call(nexusrv_trace_decoder* decoder,
+                             uint64_t callsite);
+
+int nexusrv_trace_pop_ret(nexusrv_trace_decoder* decoder,
+                           uint64_t *callsite);
+
+unsigned nexusrv_trace_callstack_used(nexusrv_trace_decoder* decoder);
 
 /** @brief Get the next indirect branch
  *

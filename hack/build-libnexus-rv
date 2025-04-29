@@ -1,0 +1,28 @@
+#!/bin/bash
+
+set -eu
+set -o pipefail
+
+D="$(readlink -f "$(dirname "$0")")"
+
+source "$D/cmd.bash"
+source "$D/common.bash"
+
+cd "$D/.."
+
+build() {
+  local type="$1"
+  shift
+  run_cmd rm -rf "cmake-build-$type"
+  run_cmd mkdir  "cmake-build-$type"
+  run_cmd cmake -B "cmake-build-$type" "$@" \
+    "-DCMAKE_INSTALL_PREFIX=$INSTALLROOT" \
+    "-DCMAKE_PREFIX_PATH=$INSTALLROOT" \
+    "-DDOCS=OFF" \
+    .
+  run_cmd make -C "cmake-build-$type" -j $(nproc) install
+  run_cmd rm -rf "cmake-build-$type"
+}
+
+eval "opts=( ${CMAKE_BUILD_OPTS["$BUILDTYPE"]} )"
+build "$BUILDTYPE" "${opts[@]}"

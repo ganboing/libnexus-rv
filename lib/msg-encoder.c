@@ -55,7 +55,13 @@ do {                                                \
 
 #define PACK_FIXED(FIELD_BITS, FIELD) PACK_FIELD(FIELD_BITS, FIELD)
 
-#if !__has_builtin(__builtin_clzg)
+#if defined(__has_builtin)
+#if __has_builtin(__builtin_clzg)
+#define __builtin_clzg(x, y) __builtin_clzg(x, y)
+#endif
+#endif
+
+#if !defined(__builtin_clzg)
 #define __builtin_clzg(arg, prec)                       \
 ({                                                      \
     typeof(arg) v = (arg);                              \
