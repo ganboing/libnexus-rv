@@ -6,6 +6,7 @@
  */
 
 #include <assert.h>
+#include <limits.h>
 #include <libnexus-rv/error.h>
 #include <libnexus-rv/msg-encoder.h>
 #include <libnexus-rv/internal/protocol.h>
@@ -64,11 +65,11 @@ do {                                                \
 #if !defined(__builtin_clzg)
 #define __builtin_clzg(arg, prec)                       \
 ({                                                      \
-    typeof(arg) v = (arg);                              \
-    int extended = 8 *                                  \
-        (sizeof(long) - sizeof (v));                    \
-    !v ? prec : v < 0 ? __builtin_clzl((long)v) :       \
-        __builtin_clzl((unsigned long)v) - extended;    \
+    unsigned long ulongv = (unsigned long)arg;          \
+    int extended = 8 * (sizeof(ulongv) - sizeof(arg));  \
+    !ulongv ? prec : ulongv > LONG_MAX ?                \
+        __builtin_clzl(ulongv) :                        \
+        __builtin_clzl(ulongv) - extended;              \
 })
 #endif
 
@@ -137,11 +138,12 @@ ssize_t nexusrv_msg_encode(const nexusrv_hw_cfg *hwcfg,
         PACK_FIXED(NEXUS_RV_BITS_ADDR_BTYPE, msg->branch_type);
     assert(nexusrv_msg_has_icnt(msg));
     PACK_VAR_REQ(msg->icnt);
-    if (nexusrv_msg_has_xaddr(msg))
+    if (nexusrv_msg_has_xaddr(msg)) {
         if (hwcfg->VAO)
             PACK_XADDR_VAO(msg->xaddr);
         else
             PACK_VAR_REQ(msg->xaddr);
+    }
     if (nexusrv_msg_has_hist(msg))
         PACK_VAR_REQ(msg->hist);
     goto finished_common;

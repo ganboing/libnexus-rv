@@ -59,7 +59,7 @@ int open_seek_file(char *filename, int oflags) {
         fd = open(filename, oflags);
     if (fd < 0)
         error(-1, errno, "Failed to open file %s", filename);
-    if (seek_file(fd, file_offset) != file_offset)
+    if (seek_file(fd, file_offset) != (ssize_t)file_offset)
         error(-1, errno, "Failed to seek file %s", filename);
     return fd;
 }

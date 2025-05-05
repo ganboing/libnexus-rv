@@ -14,6 +14,14 @@
 static const uint32_t MSG_ICNT_MAX = ((uint32_t)1 << 22) - 1;
 static const uint32_t MSG_HREPEAT_MAX = ((uint32_t)1 << 18) - 1;
 
+static uint64_t extend_addr_bits(uint64_t addr, unsigned bits) {
+    if (bits >= 64)
+        return addr;
+    if (addr & (1ULL << (bits - 1)))
+        addr |= (-1ULL << bits);
+    return addr;
+}
+
 int nexusrv_trace_decoder_init(nexusrv_trace_decoder* decoder,
                                nexusrv_msg_decoder *msg_decoder) {
     memset(decoder, 0, sizeof(*decoder));
@@ -40,6 +48,11 @@ static bool nexusrv_trace_check_msg(const nexusrv_msg *msg) {
     return true;
 }
 
+/*
+ * existing => 0
+ * fetched => 1
+ * error => <0
+ */
 static int nexusrv_trace_fetch_msg(nexusrv_trace_decoder *decoder) {
     if (decoder->msg_present)
         return 0;
@@ -70,15 +83,12 @@ static int nexusrv_trace_fetch_msg(nexusrv_trace_decoder *decoder) {
 }
 
 static void nexusrv_trace_retire_timestamp(nexusrv_trace_decoder *decoder,
-                                           uint64_t *timestamp, uint32_t *hrepeat) {
+                                           uint64_t *timestamp) {
     if (decoder->msg_decoder->hw_cfg->ext_sifive) {
         decoder->timestamp ^= *timestamp;
         *timestamp = 0;
-        //XXX: hrepeat should be 0, but relax the check here
-    } else {
-        decoder->timestamp += *timestamp / (*hrepeat + 1);
-        *timestamp -= *timestamp / (*hrepeat + 1);
-    }
+    } else
+        decoder->timestamp += *timestamp;
 }
 
 static uint32_t nexusrv_trace_available_tnts(nexusrv_trace_decoder *decoder) {
@@ -102,8 +112,8 @@ static bool nexusrv_trace_consume_tnt(nexusrv_trace_decoder *decoder) {
                 nexusrv_hist_array_front(decoder->res_hists);
         if (element->hist)
             break;
-        assert(!element->hrepeat);
-        nexusrv_trace_retire_timestamp(decoder, &element->timestamp, &element->hrepeat);
+        assert(element->repeat == 1);
+        nexusrv_trace_retire_timestamp(decoder, &element->timestamp);
         nexusrv_hist_array_pop(decoder->res_hists);
     }
     if (!decoder->res_tnts) {
@@ -128,12 +138,11 @@ static bool nexusrv_trace_consume_tnt(nexusrv_trace_decoder *decoder) {
     if (hist_bits != decoder->consumed_tnts)
         return tnt;
     decoder->consumed_tnts = 0;
-    nexusrv_trace_retire_timestamp(decoder, &element->timestamp, &element->hrepeat);
+    nexusrv_trace_retire_timestamp(decoder, &element->timestamp);
     assert(decoder->res_tnts >= hist_bits);
     decoder->res_tnts -= hist_bits;
-    if (element->hrepeat)
-        --element->hrepeat;
-    else
+    assert(element->repeat);
+    if (!--element->repeat)
         nexusrv_hist_array_pop(decoder->res_hists);
     return tnt;
 }
@@ -163,16 +172,22 @@ static void nexusrv_trace_consume_icnt(nexusrv_trace_decoder *decoder, uint32_t 
     decoder->res_icnt = 0;
 }
 
+/*
+ * existing => 0
+ * consumed => 1
+ * error => <0
+ */
 static int nexusrv_trace_pull_msg(nexusrv_trace_decoder *decoder) {
     int rc = nexusrv_trace_fetch_msg(decoder);
     if (rc < 0)
         return rc;
     if (!nexusrv_msg_is_res(&decoder->msg))
-        return rc;
+        return 0;
     if (nexusrv_hist_array_size(decoder->res_hists) >= MSG_ICNT_MAX)
         return -nexus_trace_hist_overflow;
     nexusrv_hist_arr_element element = {};
     element.timestamp = decoder->msg.timestamp;
+    element.repeat = 1;
     if (nexusrv_msg_has_icnt(&decoder->msg)) {
         // Still need to append an empty element to track time
         decoder->res_icnt += decoder->msg.icnt;
@@ -180,28 +195,30 @@ static int nexusrv_trace_pull_msg(nexusrv_trace_decoder *decoder) {
             return -nexus_trace_icnt_overflow;
     } else if (nexusrv_msg_has_hist(&decoder->msg)) {
         element.hist = decoder->msg.hist;
-        element.hrepeat = decoder->msg.hrepeat;
+        if(decoder->msg.hrepeat)
+            element.repeat = decoder->msg.hrepeat;
     } else if (decoder->msg_decoder->hw_cfg->ext_sifive) {
         // Sifive Extension
         switch (decoder->msg.res_code) {
             case 8:
                 element.hist = 0b10;
-                element.hrepeat = decoder->msg.res_data;
+                element.repeat = decoder->msg.res_data;
                 break;
             case 9:
                 element.hist = 0b11;
-                element.hrepeat = decoder->msg.res_data;
+                element.repeat = decoder->msg.res_data;
                 break;
             default:
                 return -nexus_msg_unsupported;
         }
+        if (!element.repeat)
+            return -nexus_msg_unsupported;
     } else
         return -nexus_msg_unsupported;
     rc = nexusrv_hist_array_push(decoder->res_hists, element);
     if (rc < 0)
         return rc;
-    uint32_t tnts = (1 + element.hrepeat) *
-                    nexusrv_msg_hist_bits(element.hist);
+    uint32_t tnts = element.repeat * nexusrv_msg_hist_bits(element.hist);
     decoder->res_tnts += tnts;
     // Consume the ResourceFull msg
     decoder->msg_present = 0;
@@ -226,15 +243,14 @@ static void nexusrv_trace_retire_msg(nexusrv_trace_decoder *decoder) {
     decoder->consumed_tnts = 0;
     if (nexusrv_msg_is_branch(&decoder->msg)) {
         if (nexusrv_msg_is_sync(&decoder->msg)) {
+            assert(!decoder->msg.hrepeat);
             decoder->timestamp = decoder->msg.timestamp;
             // Downgrade to ProgTraceSync, but do not retire it yet
             decoder->msg.tcode = NEXUSRV_TCODE_ProgTraceSync;
             decoder->msg.icnt = 0;
             decoder->msg.hist = 0;
         } else {
-            nexusrv_trace_retire_timestamp(decoder,
-                                           &decoder->msg.timestamp,
-                                           &decoder->msg.hrepeat);
+            nexusrv_trace_retire_timestamp(decoder, &decoder->msg.timestamp);
             if (decoder->msg.hrepeat)
                 --decoder->msg.hrepeat;
             else
@@ -247,9 +263,7 @@ static void nexusrv_trace_retire_msg(nexusrv_trace_decoder *decoder) {
         decoder->full_addr = decoder->msg.xaddr;
         nexusrv_retstack_clear(&decoder->return_stack);
     } else
-        nexusrv_trace_retire_timestamp(decoder,
-                                       &decoder->msg.timestamp,
-                                       &decoder->msg.hrepeat);
+        nexusrv_trace_retire_timestamp(decoder, &decoder->msg.timestamp);
     decoder->msg_present = 0;
     return;
 }
@@ -285,49 +299,58 @@ int32_t nexusrv_trace_try_retire(nexusrv_trace_decoder *decoder,
     if (icnt > INT32_MAX)
         icnt = INT32_MAX;
     *event = 0;
-    int rc;
-    do {
+    int rc = 1;
+    for(;;) {
         // Consume ResourceFull Msgs until we have requested icnt,
         // Or stopped at other Msgs.
         uint32_t avail_icnt = nexusrv_trace_available_icnt(decoder);
         if (icnt < avail_icnt) {
+            // if more i-cnt left, treat it as no event pending
             nexusrv_trace_consume_icnt(decoder, icnt);
             return icnt;
         }
+        // Not consuming msg
+        if (!rc)
+            break;
         rc = nexusrv_trace_pull_msg(decoder);
         if (rc < 0)
             return rc;
         // Try again, as we have consumed something
-    } while (rc);
+    }
+    assert(decoder->msg_present);
+    // Consume as much as possible
     icnt = nexusrv_trace_available_icnt(decoder);
     nexusrv_trace_consume_icnt(decoder, icnt);
-    if (nexusrv_trace_available_tnts(decoder)) {
-        *event = NEXUSRV_Trace_Event_Direct;
+    // Error has the highest priority
+    if (nexusrv_msg_is_error(&decoder->msg)) {
+        *event = NEXUSRV_Trace_Event_Error;
         return icnt;
     }
-    if (!decoder->msg_present) {
+    if (nexusrv_trace_available_tnts(decoder)) {
+        *event = NEXUSRV_Trace_Event_Direct;
         return icnt;
     }
     // Check invariants
     if (nexusrv_msg_has_hist(&decoder->msg))
         assert(decoder->consumed_tnts ==
                nexusrv_msg_hist_bits(decoder->msg.hist));
-    if (nexusrv_msg_is_branch(&decoder->msg))
-        *event = nexusrv_msg_is_indir_branch(&decoder->msg) ?
-                 (decoder->msg.branch_type ?
-                    NEXUSRV_Trace_Event_Trap :
-                    NEXUSRV_Trace_Event_Indirect) :
-                 NEXUSRV_Trace_Event_Direct;
-    else if (nexusrv_msg_is_sync(&decoder->msg))
-        *event = NEXUSRV_Trace_Event_Sync;
-    else switch (decoder->msg.tcode) {
-        case NEXUSRV_TCODE_Error:
-            *event = NEXUSRV_Trace_Event_Error;
-            break;
-        case NEXUSRV_TCODE_ProgTraceCorrelation:
-            *event = NEXUSRV_Trace_Event_Stop;
-            break;
+    if (nexusrv_msg_is_branch(&decoder->msg)) {
+        if (nexusrv_msg_is_indir_branch(&decoder->msg))
+            *event = decoder->msg.branch_type ?
+                     NEXUSRV_Trace_Event_Trap :
+                        nexusrv_msg_is_sync(&decoder->msg) ?
+                        NEXUSRV_Trace_Event_IndirectSync :
+                        NEXUSRV_Trace_Event_Indirect;
+        else
+            *event = nexusrv_msg_is_sync(&decoder->msg) ?
+                    NEXUSRV_Trace_Event_DirectSync :
+                    NEXUSRV_Trace_Event_Direct;
+        return icnt;
     }
+    if (nexusrv_msg_is_sync(&decoder->msg))
+        *event = NEXUSRV_Trace_Event_Sync;
+    else if (nexusrv_msg_is_stop(&decoder->msg))
+        *event = NEXUSRV_Trace_Event_Stop;
     return icnt;
 }
 
@@ -374,7 +397,7 @@ int nexusrv_trace_next_indirect(nexusrv_trace_decoder *decoder,
                                 nexusrv_trace_indirect *indir) {
     if (!decoder->synced)
         return -nexus_trace_not_synced;
-    int rc = nexusrv_trace_pull_msg(decoder);
+    int rc = nexusrv_trace_fetch_msg(decoder);
     if (rc < 0)
         return rc;
     if (nexusrv_trace_available_icnt(decoder) ||
@@ -389,7 +412,8 @@ int nexusrv_trace_next_indirect(nexusrv_trace_decoder *decoder,
         decoder->full_addr ^= decoder->msg.xaddr;
         decoder->msg.xaddr = 0;
     }
-    indir->target = decoder->full_addr << 1;
+    indir->target = extend_addr_bits(decoder->full_addr << 1,
+                                     decoder->msg_decoder->hw_cfg->addr_bits);
     indir->exception = 0;
     indir->interrupt = 0;
     switch (decoder->msg.branch_type) {
@@ -425,7 +449,7 @@ int nexusrv_trace_next_indirect(nexusrv_trace_decoder *decoder,
 int nexusrv_trace_next_sync(nexusrv_trace_decoder *decoder, nexusrv_trace_sync *sync) {
     if (!decoder->synced)
         return -nexus_trace_not_synced;
-    int rc = nexusrv_trace_pull_msg(decoder);
+    int rc = nexusrv_trace_fetch_msg(decoder);
     if (rc < 0)
         return rc;
     if (nexusrv_trace_available_icnt(decoder) ||
@@ -435,24 +459,34 @@ int nexusrv_trace_next_sync(nexusrv_trace_decoder *decoder, nexusrv_trace_sync *
         nexusrv_msg_is_branch(&decoder->msg))
         return -nexus_trace_mismatch;
     sync->sync = decoder->msg.sync_type;
-    sync->addr = decoder->msg.xaddr << 1;
+    sync->addr = extend_addr_bits(decoder->msg.xaddr << 1,
+                                  decoder->msg_decoder->hw_cfg->addr_bits);
     nexusrv_trace_retire_msg(decoder);
+    assert(!decoder->msg_present);
     return 1;
 }
 
 int nexusrv_trace_next_error(nexusrv_trace_decoder *decoder, nexusrv_trace_error *error) {
     if (!decoder->synced)
         return -nexus_trace_not_synced;
-    int rc = nexusrv_trace_pull_msg(decoder);
+    int rc = nexusrv_trace_fetch_msg(decoder);
     if (rc < 0)
         return rc;
-    if (nexusrv_trace_available_icnt(decoder) ||
-        nexusrv_trace_available_tnts(decoder))
-        return -nexus_trace_mismatch;
     if (decoder->msg.tcode != NEXUSRV_TCODE_Error)
         return -nexus_trace_mismatch;
     error->ecode = decoder->msg.error_code;
     error->etype = decoder->msg.error_type;
+    // Drain all resource
+    decoder->res_icnt = 0;
+    decoder->res_tnts = 0;
+    decoder->consumed_icnt = 0;
+    decoder->consumed_tnts = 0;
+    while (nexusrv_hist_array_size(decoder->res_hists)) {
+        nexusrv_hist_arr_element *element =
+                nexusrv_hist_array_front(decoder->res_hists);
+        nexusrv_trace_retire_timestamp(decoder, &element->timestamp);
+        nexusrv_hist_array_pop(decoder->res_hists);
+    }
     nexusrv_trace_retire_msg(decoder);
     assert(!decoder->msg_present);
     decoder->synced = 0;
@@ -462,7 +496,7 @@ int nexusrv_trace_next_error(nexusrv_trace_decoder *decoder, nexusrv_trace_error
 int nexusrv_trace_next_stop(nexusrv_trace_decoder *decoder, nexusrv_trace_stop *stop) {
     if (!decoder->synced)
         return -nexus_trace_not_synced;
-    int rc = nexusrv_trace_pull_msg(decoder);
+    int rc = nexusrv_trace_fetch_msg(decoder);
     if (rc < 0)
         return rc;
     if (nexusrv_trace_available_icnt(decoder) ||

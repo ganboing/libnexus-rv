@@ -11,7 +11,10 @@
 
 #ifdef __cplusplus
 #include <memory>
+#include <fstream>
 #include <cstdio>
+#include <cstdarg>
+#include <cassert>
 extern "C" {
 #endif
 
@@ -41,6 +44,11 @@ inline void bin2hex(char *str, const uint8_t *bin, size_t n) {
 struct auto_fd {
     int fd;
     inline auto_fd(int fd) : fd(fd) {}
+    inline void reset(int new_fd) {
+        if (fd >= 0)
+            close(fd);
+        fd = new_fd;
+    }
     inline ~auto_fd() {
         if (fd >= 0)
             close(fd);
@@ -48,6 +56,40 @@ struct auto_fd {
 };
 
 typedef std::unique_ptr<FILE, decltype(&fclose)> auto_file;
+
+inline std::string
+cppfmt(const char *fmt, ...) {
+    std::string ret;
+    va_list vl;
+    va_start(vl, fmt);
+    int len = vsnprintf(nullptr, 0, fmt, vl);
+    va_end(vl);
+    assert(len >= 0);
+    if (!len)
+        return ret;
+    ret.resize(len);
+    assert(!ret.empty());
+    va_start(vl, fmt);
+    vsprintf(&ret.front(), fmt, vl);
+    va_end(vl);
+    return ret;
+}
+
+inline std::string
+read_file(const char *filename) {
+    std::ifstream ifs(filename);
+    return std::string(
+        std::istreambuf_iterator<char>(ifs),
+        std::istreambuf_iterator<char>());
+}
+
+inline std::vector<uint8_t>
+read_file_binary(const char *filename) {
+    std::ifstream ifs(filename, std::ios::in | std::ios::binary);
+    return std::vector<uint8_t>(
+        std::istreambuf_iterator<char>(ifs),
+        std::istreambuf_iterator<char>());
+}
 
 #endif
 #endif

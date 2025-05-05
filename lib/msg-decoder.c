@@ -240,10 +240,11 @@ done:
 }
 
 ssize_t nexusrv_msg_decoder_next(nexusrv_msg_decoder *decoder,
-                                    nexusrv_msg *msg) {
+                                 nexusrv_msg *msg) {
     assert(decoder->pos <= decoder->filled);
     assert(decoder->filled <= decoder->bufsz);
     ssize_t carry, rc;
+try_again:
     decoder->lastmsg_len = 0;
     if (decoder->pos == decoder->filled) {
         if (decoder->pos)
@@ -264,6 +265,10 @@ ssize_t nexusrv_msg_decoder_next(nexusrv_msg_decoder *decoder,
             decoder->pos = decoder->filled = 0;
         }
         decoder->lastmsg_len = rc;
+        // Check SRC filter
+        if (decoder->src_filter >=0 &&
+            decoder->src_filter != msg->src)
+            goto try_again;
         return rc;
     }
     // We have already reached EOF, so it's a real stream truncate
@@ -285,7 +290,7 @@ read_buffer:
     decoder->filled += rc;
     if (decoder->filled > 0)
         // No need to fear for infinite recursion, as pos = 0 && filled > 0
-        return nexusrv_msg_decoder_next(decoder, msg);
+        goto try_again;
     // read nothing and nothing left, set the pos/filled to max
     decoder->pos = decoder->filled = decoder->bufsz;
     return 0;

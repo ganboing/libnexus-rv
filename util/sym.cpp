@@ -1,6 +1,7 @@
 #include <error.h>
 #include <algorithm>
 #include <cinttypes>
+#include <cstring>
 #include <fcntl.h>
 #include "sym.h"
 
@@ -16,7 +17,7 @@ const char *exe_addr2line = []{
    return DEFAULT_ADDR2LINE;
 }();
 
-sym_server::sym_server(const char *filename) :
+sym_server::sym_server(const char *filename, const char *section) :
 read_fp(nullptr, fclose), write_fp(nullptr, fclose) {
     union {
         struct {
@@ -49,7 +50,12 @@ read_fp(nullptr, fclose), write_fp(nullptr, fclose) {
             error(-1, errno, "dup2 failed");
         close(fds.server_r);
         close(fds.server_w);
-        const char *args[] = {exe_addr2line, "-f", "-e", filename, nullptr};
+        const char *args[] = {exe_addr2line, "-f", "-e", filename,
+                              nullptr, nullptr, nullptr};
+        if (section) {
+            args[4] = "-j";
+            args[5] = section;
+        }
         execvp(exe_addr2line, (char**)args);
         error(-1, errno, "exec addr2line failed");
     }
@@ -67,17 +73,41 @@ sym_answer sym_server::query(uint64_t addr) {
     rc = getline(&line, &linesz, read_fp.get());
     if (rc <= 0)
         error(-1, errno, "getline failed (filename/notes)");
-    auto cpos = find(line, line + rc - 1, ':');
+    auto cpos = strrchr(line, ':');
     const string *filename = nullptr;
     unsigned long lineno = 0;
     const string *note = nullptr;
-    if (cpos != line + rc - 1) {
+    if (cpos) {
         filename = &*strings.emplace(line, cpos).first;
         lineno = strtoul(cpos + 1, &cpos, 10);
-    }
-    if (cpos != line + rc - 1) {
-        note = &*strings.emplace(cpos, line + rc - 1).first;
+        if (cpos != line + rc - 1)
+            note = &*strings.emplace(cpos, line + rc - 1).first;
     }
     it = cached.emplace(addr, sym_answer{func, filename, lineno, note}).first;
     return it->second;
+}
+
+void sym_iterate_kallsyms(FILE *fp, const function<
+        bool(uint64_t, char, const char *, const char*)>& f) {
+    char *line = nullptr;
+    size_t sz = 0;
+    ssize_t rc;
+    while ((rc = getline(&line, &sz, fp)) > 0) {
+        if (line[rc - 1] == '\n')
+            line[rc - 1] = '\0';
+        char *type = strchr(line, ' ');
+        if (!type)
+            error(-1, 0, "cannot find symbol type, kallsyms str=%s", line);
+        *type++ = '\0';
+        char *name = strchr(type, ' ');
+        if (!name)
+            error(-1, 0, "cannot find symbol name, kallsyms str=%s", type);
+        ++name;
+        char *module = strchr(name, '\t');
+        if (module)
+            *module++ = '\0';
+        if (!f(strtoull(line, nullptr, 16), *type, name, module))
+            break;
+    }
+    free(line);
 }

@@ -7,6 +7,8 @@ add_library(libnexus-rv
         hist-array.cpp
         misc.c )
 
+target_compile_options(libnexus-rv PUBLIC -Wdisabled-optimization -foptimize-sibling-calls)
+
 target_include_directories(libnexus-rv
         PUBLIC "${PROJECT_SOURCE_DIR}/include")
 

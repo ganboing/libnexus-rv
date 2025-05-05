@@ -199,6 +199,14 @@ static inline bool nexusrv_msg_is_sync(const nexusrv_msg *msg) {
     }
 }
 
+static inline bool nexusrv_msg_is_error(const nexusrv_msg *msg) {
+    return msg->tcode == NEXUSRV_TCODE_Error;
+}
+
+static inline bool nexusrv_msg_is_stop(const nexusrv_msg *msg) {
+    return msg->tcode == NEXUSRV_TCODE_ProgTraceCorrelation;
+}
+
 static inline bool nexusrv_msg_has_icnt(const nexusrv_msg *msg) {
     switch (msg->tcode) {
         case NEXUSRV_TCODE_ResourceFull:

@@ -24,12 +24,14 @@ abfd(bfd_fdopenr(filename, nullptr, autofd.fd), &bfd_close)
         error(-1, 0, "failed to open %s", filename);
     if (!bfd_check_format(abfd.get(), format))
         error(-1, 0, "failed to bfd_check_format");
-    bfd_map_over_sections(abfd.get(), [](bfd *abfd, asection *sect, void *obj) {
+    bfd_map_over_sections(abfd.get(), [](bfd*, asection *sect, void *obj) {
         auto objf = static_cast<obj_file*>(obj);
         objf->sect_by_name.emplace(string_view(sect->name), sect);
         if (!sect->size)
             return;
         if ((sect->flags & (SEC_LOAD | SEC_ALLOC)) != (SEC_LOAD | SEC_ALLOC))
+            return;
+        if (string_view(sect->name).starts_with(".note."sv))
             return;
         auto [it_vma, inserted_vma] =
                 objf->sect_by_vma.emplace(sect->vma, sect);
@@ -135,68 +137,4 @@ obj_file::~obj_file() {
         auto fileoff = i++->first;
         unmap(fileoff);
     }
-}
-
-shared_ptr<obj_file> obj_file_store::search_in(const vector<string>& dirs,
-                                               const char *filename,
-                                               bfd_format format) {
-    error_code ec;
-    // Convert to relative path
-    while (*filename == '/')
-        ++filename;
-    for (auto &d : dirs) {
-        auto full_path = filesystem::path(d) / filename;
-        if (!filesystem::exists(full_path, ec))
-            continue;
-        return make_shared<obj_file>(full_path.c_str(), format);
-    }
-    return nullptr;
-}
-
-shared_ptr<obj_file> obj_file_store::get(const char *filename, bfd_format format) const {
-    return search_in(prefixes, filename, format);
-}
-
-shared_ptr<obj_file> obj_file_store::get_dbg(const char *filename, bfd_format format) const {
-    char filename_dbg[strlen(filename) + 1 /* slash */ + 6 /* .debug */ + 1 /* null */];
-    size_t n = snprintf(filename_dbg, sizeof(filename_dbg), "%s/.debug", filename);
-    assert(n + 1 == sizeof(filename_dbg));
-    // try /usr/bin/ls.debug
-    auto obj = search_in(prefixes, filename_dbg, format);
-    if (obj)
-        return obj;
-    // /usr/lib/debug/usr/bin/ls.debug
-    return search_in(dbg_prefixes, filename_dbg, format);
-}
-
-shared_ptr<obj_file> obj_file_store::get_dbg_buildid(const std::vector<uint8_t>& buildid,
-                                                     bfd_format format) const {
-    if (buildid.size() < 2)
-        error(-1, 0, "buildid is too short");
-    static const char buildid_prefix[] = ".build-id/";
-    char filename_dbg[buildid.size() * 2 + sizeof(buildid_prefix) + 1 /* slash */ + 6 /* .debug */];
-    strcpy(filename_dbg, buildid_prefix);
-    char *p = filename_dbg + sizeof(buildid_prefix) - 1;
-    bin2hex(p, buildid.data(), 1);
-    p += 2;
-    *p++ = '/';
-    bin2hex(p, buildid.data() + 1, buildid.size() - 1);
-    p += 2 * (buildid.size() - 1);
-    strcpy(p, ".debug");
-    p += sizeof(".debug");
-    assert(p - filename_dbg == sizeof(filename_dbg));
-    return search_in(dbg_prefixes, filename_dbg, format);
-}
-
-vector<string> split_dirs(const string& str) {
-    vector<string> ret;
-    for (auto i = str.begin(), j = str.end(); i != j; ++i) {
-        auto brk = find(i, j, ':');
-        if (i != brk)
-            ret.emplace_back(i, brk);
-        if (j == brk)
-            break;
-        i = brk;
-    }
-    return ret;
 }

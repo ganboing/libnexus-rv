@@ -4,7 +4,7 @@
 
 using namespace std;
 
-void memory_view::load_core(shared_ptr<linuxcore> coredump) {
+void memory_view::load_core(shared_ptr<core_file> coredump) {
     for (auto& [vma, sect] : coredump->get_sect_by_vma()) {
         auto [sec_it, sec_inserted] = loaded_sections.emplace(vma,
                 loaded_section{coredump, sect});
@@ -29,31 +29,50 @@ pair<const uint8_t*, size_t> memory_view::try_map(uint64_t vma) {
     return make_pair(vma - it->first + (uint8_t*)addr, sz - (vma - it->first));
 }
 
-pair<shared_ptr<obj_file>, uint64_t> memory_view::query_sym(uint64_t vma) {
+tuple<shared_ptr<obj_file>, const string*, uint64_t> memory_view::query_sym(uint64_t vma) {
     auto it = loaded_sections.upper_bound(vma);
     if (it == loaded_sections.begin())
-        return make_pair(nullptr, 0);
+        return no_map_or_sym;
     --it;
     if (vma - it->first >= it->second.asection->size)
-        return make_pair(nullptr, 0);
-    auto [filename, fileoff] = it->second.core->get_file_backing(vma);
+        return no_map_or_sym;
+    auto core = it->second.core;
+    auto [filename, filesection, fileoff] = core->get_file_backing(vma);
     if (!filename)
-        return make_pair(nullptr, 0);
-    auto it2 = backed_file_cache.find(filename);
-    if (it2 == backed_file_cache.end()) {
-        shared_ptr<obj_file> obj =  it->second.core->get_obj_store().get(filename), dbg;
-        if (obj) {
-            auto buildid = obj->get_build_id();
+        return no_map_or_sym;
+    auto& cache = backed_file_cache[core];
+    auto it2 = cache.find(filename);
+    if (it2 == cache.end()) {
+        auto obj_store = core->obj_store();
+        shared_ptr<obj_file> bin = obj_store->get(filename->c_str()), dbg = nullptr;
+        if (bin) {
+            auto buildid = bin->get_build_id();
             // Try build-id if available
             if (buildid)
-                dbg = it->second.core->get_obj_store().get_dbg_buildid(*buildid);
+                dbg = obj_store->get_dbg_buildid(*buildid);
         }
         if (!dbg)
-            dbg = it->second.core->get_obj_store().get_dbg(filename);
-        it2 = backed_file_cache.emplace(filename, make_pair(obj, dbg)).first;
+            dbg = obj_store->get_dbg(filename->c_str());
+        it2 = cache.emplace(filename, make_pair(bin, dbg)).first;
     }
     auto [bin, dbg] = it2->second;
-    if (!bin)
-        return make_pair(nullptr, 0);
-    return make_pair(dbg ? dbg : bin, bin->fileoff_to_va(fileoff));
+    // Without section offsets, binary must be found to produce the correct VA
+    if (!bin && !filesection)
+        return no_map_or_sym;
+    // If neither binary nor debug info is found, just return null
+    if (!bin && !dbg)
+        return no_map_or_sym;
+    return make_tuple(dbg ? dbg : bin, filesection,
+                      filesection ? fileoff : bin->fileoff_to_va(fileoff));
+}
+
+tuple<const string*, const string*, uint64_t> memory_view::query_label(uint64_t vma) {
+    auto it = loaded_sections.upper_bound(vma);
+    if (it == loaded_sections.begin())
+        return no_map_or_sym;
+    --it;
+    if (vma - it->first >= it->second.asection->size)
+        return no_map_or_sym;
+    auto core = it->second.core;
+    return core->get_label(vma);
 }

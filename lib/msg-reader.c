@@ -99,4 +99,5 @@ handle_rest:
             break;
         }
     }
+    return 0;
 }

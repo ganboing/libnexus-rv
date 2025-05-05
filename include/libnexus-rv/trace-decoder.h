@@ -23,10 +23,21 @@
  *     In BTM mode, no event pending. In HTM mode, a TNT might be pending.
  *     Use nexusrv_trace_next_tnt to retrieve it
  * * \b NEXUSRV_Trace_Event_Direct:
- *     Only in BTM mode, a direct branch is pending.
+ *     A direct branch is pending.
  *     Use nexusrv_trace_next_tnt to retrieve it
+ * * \b NEXUSRV_Trace_Event_DirectSync:
+ *     A direct branch+sync is pending.
+ *     Use nexusrv_trace_next_tnt to retrieve the direct branch, or
+ *     Use nexusrv_trace_next_sync to retrieve the sync.
+ *     Note: use nexusrv_trace_next_sync will discard the direct branch.
  * * \b NEXUSRV_Trace_Event_Indirect:
+ *     An indirect branch is pending
  *     Use nexusrv_trace_next_indirect to retrieve it
+ * * \b NEXUSRV_Trace_Event_IndirectSync:
+ *     An indirect branch+sync is pending
+ *     Use nexusrv_trace_next_indirect to retrieve the indirect branch, or
+ *     Use nexusrv_trace_next_sync to retrieve the sync.
+ *     Note: use nexusrv_trace_next_sync will discard the indirect branch.
  * * \b NEXUSRV_Trace_Event_Sync: Use nexusrv_trace_next_sync to retrieve it
  * * \b NEXUSRV_Trace_Event_Stop: Use nexusrv_trace_next_stop to retrieve it
  * * \b NEXUSRV_Trace_Event_Error: Use nexusrv_trace_next_error to retrieve it
@@ -116,12 +127,41 @@ typedef struct nexusrv_trace_stop {
 enum nexusrv_trace_events {
     NEXUSRV_Trace_Event_None,
     NEXUSRV_Trace_Event_Direct,
+    NEXUSRV_Trace_Event_DirectSync,
     NEXUSRV_Trace_Event_Trap,
     NEXUSRV_Trace_Event_Indirect,
+    NEXUSRV_Trace_Event_IndirectSync,
     NEXUSRV_Trace_Event_Sync,
     NEXUSRV_Trace_Event_Stop,
     NEXUSRV_Trace_Event_Error,
 };
+
+static inline const char
+*str_nexusrv_trace_event(unsigned event) {
+    switch (event) {
+        case NEXUSRV_Trace_Event_None:
+            return "none";
+        case NEXUSRV_Trace_Event_Direct:
+            return "direct";
+        case NEXUSRV_Trace_Event_DirectSync:
+            return "direct-sync";
+        case NEXUSRV_Trace_Event_Trap:
+            return "trap";
+        case NEXUSRV_Trace_Event_Indirect:
+            return "indirect";
+        case NEXUSRV_Trace_Event_IndirectSync:
+            return "indirect-sync";
+        case NEXUSRV_Trace_Event_Sync:
+            return "sync";
+        case NEXUSRV_Trace_Event_Stop:
+            return "stop";
+        case NEXUSRV_Trace_Event_Error:
+            return "error";
+        default:
+            return "unknown";
+    }
+}
+
 
 /** @brief NexusRV Trace decoder context
  *
@@ -144,7 +184,6 @@ typedef struct nexusrv_trace_decoder {
     uint64_t full_addr;     /*!< Address tracking */
     uint64_t timestamp;     /*!< Timestamp tracking */
     nexusrv_return_stack return_stack; /*!< Return stack tracking */
-
 } nexusrv_trace_decoder;
 
 /** @brief Initialize the trace decoder

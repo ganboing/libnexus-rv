@@ -37,42 +37,70 @@ static struct option long_opts[] = {
         {"help",      no_argument,       NULL, 'h'},
         {"tsbits",    required_argument, NULL, 't'},
         {"srcbits",   required_argument, NULL, 's'},
+        {"filter",    required_argument, NULL, 'c'},
         {"buffersz",  required_argument, NULL, 'b'},
         {"sysroot",   required_argument, NULL, 'r'},
         {"debugdir",  required_argument, NULL, 'd'},
+        {"procfs",    required_argument, NULL, 'p'},
+        {"sysfs",     required_argument, NULL, 'y'},
         {"ucore",     required_argument, NULL, 'u'},
+        {"kcore",    no_argument,       NULL, 'k'},
         {NULL, 0,                        NULL, 0},
 };
 
-static const char short_opts[] = "hb:t:s:r:d:u:";
+static const char short_opts[] = "hb:t:s:c:r:d:p:y:u:k";
 
 static void help(const char *argv0) {
     error(-1, 0, "Usage: \n"
                   "\t%s: [OPTIONS...] <trace file> or - for stdin\n"
                   "\n"
-                  "\t-h, --help       Display this help message\n"
-                  "\t-t, --tsbits     Bits of Timestamp, default 0\n"
-                  "\t-s, --srcbits    Bits of SRC field, default 0\n"
-                  "\t-b, --buffersz   Buffer size (default %d)\n"
-                  "\t-r, --sysroot    Sysroot search dirs (affects following --ucore --kcore)\n"
-                  "\t-d, --debugdir   Debug search dirs (affects following --ucore --kcore)\n"
-                  "\t-u, --ucore      Userspace coredump (can be multiple)\n",
+                  "\t-h, --help            Display this help message\n"
+                  "\t-t, --tsbits [int]    Bits of Timestamp, default 0\n"
+                  "\t-s, --srcbits [int]   Bits of SRC field, default 0\n"
+                  "\t-c, --filter [int]    Select a particular SRC (hart)\n"
+                  "\t-b, --buffersz [int]  Buffer size (default %d)\n"
+                  "\t-p, --procfs [path]   Path to procfs (default /proc)\n"
+                  "\t-y, --sysfs [path]    Path to sysfs (default /sys)\n"
+                  "\t-r, --sysroot [path:path:...]\n"
+                  "\t                      Sysroot search dirs (affects following --ucore --kcore)\n"
+                  "\t-d, --debugdir [path:path:...]\n"
+                  "\t                      Debug search dirs (affects following --ucore --kcore)\n"
+                  "\t-u, --ucore [path]    Userspace coredump (can be multiple)\n"
+                  "\t-k, --kcore           Kernel coredump (using {procfs}/kcore)\n",
           argv0, DEFAULT_BUFFER_SIZE);
 }
 
 #define FMT_TIME_OFFSET "\n[%" PRIu64 "] +%zu "
 
-map<shared_ptr<obj_file>, sym_server> sym_srvs;
+map<shared_ptr<obj_file>, map<string, sym_server> > sym_srvs;
 unordered_map<uint64_t, shared_ptr<rv_inst_block> > insts;
+
+static void print_label(shared_ptr<memory_view> vm, FILE *fp, uint64_t addr,
+                        const string **last_func) {
+    auto [func, module, vma] = vm->query_label(addr);
+    if (!func)
+        return;
+    if (*last_func != func)
+        fprintf(fp, " %s", func->c_str());
+    else if (module)
+        fprintf(fp, " %*s", int(func->size()), "");
+    *last_func = func;
+    if (module)
+        fprintf(fp, "; %s", module->c_str());
+}
 
 static void print_sym(shared_ptr<memory_view> vm, FILE *fp, uint64_t addr,
                       const string **last_func) {
-    auto [obj, vma] = vm->query_sym(addr);
-    if (!obj)
+    auto [obj, section, vma] = vm->query_sym(addr);
+    if (!obj) {
+        print_label(vm, fp, addr, last_func);
         return;
-    auto it = sym_srvs.find(obj);
-    if (it == sym_srvs.end())
-        it = sym_srvs.emplace(obj, obj->filename()).first;
+    }
+    auto& srvs = sym_srvs[obj];
+    auto it = srvs.try_emplace(
+            section ? *section : "",
+            obj->filename(),
+            section ? section->c_str() : nullptr).first;
     auto answer = it->second.query(vma);
     auto *filename = answer.filename;
     if (*last_func != answer.func)
@@ -82,8 +110,7 @@ static void print_sym(shared_ptr<memory_view> vm, FILE *fp, uint64_t addr,
     *last_func = answer.func;
     if (!filename)
         return;
-    string_view short_fn;
-    short_fn = *filename;
+    string_view short_fn(*filename);
     auto it_fn = find(filename->rbegin(), filename->rend(), '/');
     if (it_fn != filename->rend())
         short_fn = string_view(it_fn.base(), filename->end());
@@ -112,7 +139,7 @@ static void replay(shared_ptr<memory_view> vm, nexusrv_msg_decoder *msg_decoder,
               str_nexus_error(-rc));
     uint64_t tnt_time = 0;
     uint64_t last_time = 0;
-    std::optional<uint64_t> lastip;
+    optional<uint64_t> lastip;
     const string *last_func = nullptr;
     int addr_printed = 0, inst_printed = 0;
     for (;;) {
@@ -149,20 +176,30 @@ static void replay(shared_ptr<memory_view> vm, nexusrv_msg_decoder *msg_decoder,
                         nexusrv_trace_time(&trace_decoder),
                         nexusrv_msg_decoder_offset(msg_decoder),
                         *lastip, instblock->icnt));
-            int inst_strlen = instblock->print_pre(fp);
             try {
+                unsigned stack = nexusrv_trace_callstack_used(&trace_decoder);
                 lastip.emplace(instblock->retire(&trace_decoder));
-                int post_len = instblock->print_post(fp);
-                if (inst_strlen > 0 && post_len >= 0)
-                    align_print(&inst_printed, fp, inst_strlen + post_len);
+                align_print(&inst_printed, fp, instblock->print(fp));
+                // Indent with stack depth
+                fprintf(fp, "%*s", stack, "");
                 print_sym(vm, fp, instblock->addr, &last_func);
                 continue;
             } catch (rv_inst_exc_event& exc_event) {
-                lastip = exc_event.addr;
+                lastip.emplace(exc_event.addr);
                 event = exc_event.event;
+                assert(*lastip >= instblock->addr &&
+                        *lastip - instblock->addr < instblock->icnt * 2);
+                auto insn = rv_inst_block::disasm1(vm, *lastip, true);
+                align_print(&inst_printed, fp, fprintf(
+                        fp, "[retired %" PRIu64 "] %s%s%s",
+                        (*lastip - instblock->addr) / 2,
+                        insn ? insn->mnemonic : "",
+                        insn ? " " : "",
+                        insn ? insn->op_str : ""));
                 goto handle_event;
             } catch (rv_inst_exc_failed& failed) {
                 rc = failed.rc;
+                assert(rc < 0);
             }
         } else
             rc = nexusrv_trace_try_retire(&trace_decoder, UINT32_MAX, &event);
@@ -186,29 +223,31 @@ static void replay(shared_ptr<memory_view> vm, nexusrv_msg_decoder *msg_decoder,
         }
 handle_event:
         switch (event) {
-            case NEXUSRV_Trace_Event_Direct: {
+            case NEXUSRV_Trace_Event_Direct:
+            case NEXUSRV_Trace_Event_DirectSync: {
                 /* Have no way to tell the branch target, reset lastip */
                 lastip.reset();
-                rc = nexusrv_trace_next_tnt(&trace_decoder);
-                if (rc < 0)
-                    error(-rc, 0, "next_tnt failed: %s",
-                          str_nexus_error(-rc));
                 if (tnt_time != nexusrv_trace_time(&trace_decoder))
                     fprintf(fp,FMT_TIME_OFFSET "TNT ",
                             nexusrv_trace_time(&trace_decoder),
                             nexusrv_msg_decoder_offset(msg_decoder));
-                fprintf(fp, "%c", rc > 0 ? '!' : '.');
                 tnt_time = nexusrv_trace_time(&trace_decoder);
+                rc = nexusrv_trace_next_tnt(&trace_decoder);
+                if (rc < 0)
+                    error(-rc, 0, "next_tnt failed: %s",
+                          str_nexus_error(-rc));
+                fprintf(fp, "%c", rc > 0 ? '!' : '.');
                 break;
             }
             case NEXUSRV_Trace_Event_Indirect:
+            case NEXUSRV_Trace_Event_IndirectSync:
             case NEXUSRV_Trace_Event_Trap: {
                 rc = nexusrv_trace_next_indirect(&trace_decoder, &indir);
                 if (rc < 0)
                     error(-rc, 0, "next_indir failed: %s",
                           str_nexus_error(-rc));
                 lastip.emplace(indir.target);
-                fprintf(fp,FMT_TIME_OFFSET "INDIRECT %s%s to 0x%" PRIx64,
+                fprintf(fp,FMT_TIME_OFFSET "INDIRECT%s%s to 0x%" PRIx64,
                         nexusrv_trace_time(&trace_decoder),
                         nexusrv_msg_decoder_offset(msg_decoder),
                         indir.interrupt ? " interrupt" : "",
@@ -284,19 +323,26 @@ done_trace:
 int main(int argc, char **argv) {
     nexusrv_hw_cfg hwcfg = {};
     hwcfg.ext_sifive = true; // Enable Sifive extension by default
+    hwcfg.addr_bits = 48;
+    int16_t cpu = -1;
     size_t bufsz = DEFAULT_BUFFER_SIZE;
+    const char *sysfs = "/sys";
+    const char *procfs = "/proc";
     vector<string> sysroot_dirs = { "/" };
     vector<string> dbg_dirs = { "/usr/lib/debug" };
-    vector<shared_ptr<linuxcore> > user_core_files;
     auto vm = make_shared<memory_view>();
     OPT_PARSE_BEGIN
     OPT_PARSE_H_HELP
     OPT_PARSE_T_TSBITS
     OPT_PARSE_S_SRCBITS
+    OPT_PARSE_C_CPU
     OPT_PARSE_B_BUFSZ
     OPT_PARSE_U_UCORE
     OPT_PARSE_R_SYSROOT
     OPT_PARSE_D_DEBUGDIR
+    OPT_PARSE_P_PROCFS
+    OPT_PARSE_Y_SYSFS
+    OPT_PARSE_K_KCORE
     OPT_PARSE_END
     if (argc == optind)
         error(-1, 0, "Insufficient arguments");
@@ -304,7 +350,8 @@ int main(int argc, char **argv) {
     int fd = open_seek_file(filename, O_RDONLY | O_CLOEXEC);
     unique_ptr<uint8_t[]> buffer = make_unique<uint8_t[]>(bufsz);
     nexusrv_msg_decoder msg_decoder = {};
-    nexusrv_msg_decoder_init(&msg_decoder, &hwcfg, fd, buffer.get(), bufsz);
+    nexusrv_msg_decoder_init(&msg_decoder,
+                             &hwcfg, fd, cpu, buffer.get(), bufsz);
     replay(vm, &msg_decoder, stdout);
     close(fd);
     return 0;

@@ -53,7 +53,7 @@ static void split(nexusrv_hw_cfg *hwcfg, int fd, size_t bufsz, const char *prefi
     if (!buffer)
         error(-1, 0, "Failed to allocate buffer");
     nexusrv_msg_decoder msg_decoder = {};
-    nexusrv_msg_decoder_init(&msg_decoder, hwcfg, fd, buffer, bufsz);
+    nexusrv_msg_decoder_init(&msg_decoder, hwcfg, fd, -1, buffer, bufsz);
     size_t decoded_bytes = 0;
     ssize_t rc;
     for (;; decoded_bytes += rc, ++msgid) {
@@ -86,7 +86,7 @@ static void split(nexusrv_hw_cfg *hwcfg, int fd, size_t bufsz, const char *prefi
     free(buffer);
     fprintf(stderr, "\n Total: %zu Msg, Decoded %zu bytes\n",
             msgid, decoded_bytes);
-    for (size_t i = 0; i < (1 << hwcfg->src_bits); ++i) {
+    for (size_t i = 0; i < (1U << hwcfg->src_bits); ++i) {
         if (!fp_array[i])
             continue;
         fprintf(stderr, "  SRC %zu: %zu Msg, Decoded %zu bytes\n",

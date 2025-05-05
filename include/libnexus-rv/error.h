@@ -54,6 +54,8 @@ static inline const char *str_nexus_error(int err) {
             return "nexus_trace_hist_overflow";
         case nexus_trace_icnt_overflow:
             return "nexus_trace_icnt_overflow";
+        case nexus_trace_retstack_empty:
+            return "nexus_trace_retstack_empty";
         case nexus_trace_mismatch:
             return "nexus_trace_mismatch";
         default:

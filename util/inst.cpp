@@ -15,7 +15,7 @@ struct auto_csh {
     csh handle;
 };
 
-std::map<pair<cs_arch, cs_mode>, auto_csh> cached_csh;
+map<pair<cs_arch, cs_mode>, auto_csh> cached_csh;
 
 uint64_t rv_inst_block::retire(nexusrv_trace_decoder *decoder) {
     check_exc(decoder);
@@ -27,8 +27,20 @@ unsigned rv_inst_block::check_exc(nexusrv_trace_decoder *decoder) {
     int32_t retired = nexusrv_trace_try_retire(decoder, icnt, &event);
     if (retired < 0)
         throw rv_inst_exc_failed{retired};
-    if (retired < icnt)
-        throw rv_inst_exc_event{addr + retired * 2, event};
+    if ((uint32_t)retired < icnt) {
+        switch (event) {
+            // Expect these messages at any given i-cnt
+            case NEXUSRV_Trace_Event_Trap:
+            case NEXUSRV_Trace_Event_DirectSync:
+            case NEXUSRV_Trace_Event_IndirectSync:
+            case NEXUSRV_Trace_Event_Sync:
+            case NEXUSRV_Trace_Event_Error:
+                throw rv_inst_exc_event{addr + retired * 2, event};
+        }
+        error(-1, 0,
+              "Expecting trap/sync/error, but got %s, icnt=%" PRIi32,
+              str_nexusrv_trace_event(event), retired);
+    }
     return event;
 }
 
@@ -59,8 +71,9 @@ uint64_t rv_ib_cond_branch::retire(nexusrv_trace_decoder *decoder) {
     return addr + icnt * 2 - insn->size + off;
 }
 
-int rv_ib_cond_branch::print_post(FILE *fp) {
-    return fprintf(fp, "%s", taken ? " [taken]" : "");
+int rv_ib_cond_branch::print(FILE *fp) {
+    return rv_inst_block::print(fp) +
+        fprintf(fp, "%s", taken ? " [taken]" : "");
 }
 
 uint64_t rv_ib_dir_call::retire(nexusrv_trace_decoder *decoder) {
@@ -71,8 +84,9 @@ uint64_t rv_ib_dir_call::retire(nexusrv_trace_decoder *decoder) {
     return target;
 }
 
-int rv_ib_dir_call::print_post(FILE *fp) {
-    return fprintf(fp, " [stack:%u->%u]", stack0, stack1);
+int rv_ib_dir_call::print(FILE *fp) {
+    return rv_inst_block::print(fp) +
+        fprintf(fp, " [stack:%u->%u]", stack0, stack1);
 }
 
 uint64_t rv_ib_indir_jmp::retire(nexusrv_trace_decoder *decoder) {
@@ -94,8 +108,9 @@ uint64_t rv_ib_indir_call::retire(nexusrv_trace_decoder *decoder) {
     return target;
 }
 
-int rv_ib_indir_call::print_post(FILE *fp) {
-    return fprintf(fp, " [stack:%u->%u]", stack0, stack1);
+int rv_ib_indir_call::print(FILE *fp) {
+    return rv_inst_block::print(fp) +
+        fprintf(fp, " [stack:%u->%u]", stack0, stack1);
 }
 
 uint64_t rv_ib_ret::retire(nexusrv_trace_decoder *decoder) {
@@ -117,16 +132,35 @@ uint64_t rv_ib_ret::retire(nexusrv_trace_decoder *decoder) {
     return target;
 }
 
-int rv_ib_ret::print_post(FILE *fp) {
-    return fprintf(fp, "%s [stack:%u->%u]",
-                   IRO ? " [implicit]" : "",
-                   stacksz, IRO ? stacksz - 1 : stacksz);
+int rv_ib_ret::print(FILE *fp) {
+    return rv_inst_block::print(fp) +
+        fprintf(fp, "%s [stack:%u->%u]",
+                IRO ? " [implicit]" : "",
+                stacksz, IRO ? stacksz - 1 : stacksz);
 }
 
 uint64_t rv_ib_co_swap::retire(nexusrv_trace_decoder *decoder) {
-    uint64_t target = rv_ib_ret::retire(decoder);
-    nexusrv_trace_push_call(decoder, addr + icnt * 2);
+    stack0 = nexusrv_trace_callstack_used(decoder);
+    IRO = false;
+    coswap = false;
+    uint64_t target;
+    if (decoder->msg_decoder->hw_cfg->ext_sifive)
+        target = rv_ib_indir_call::retire(decoder);
+    else {
+        coswap = true;
+        target = rv_ib_ret::retire(decoder);
+        nexusrv_trace_push_call(decoder, addr + icnt * 2);
+    }
+    stack1 = nexusrv_trace_callstack_used(decoder);
     return target;
+}
+
+int rv_ib_co_swap::print(FILE *fp) {
+    return rv_inst_block::print(fp) +
+        fprintf(fp, "%s%s [stack:%u->%u]",
+                IRO ? " [implicit]" : "",
+                coswap ? " [coswap]" : "",
+                stack0, stack1);
 }
 
 uint64_t rv_ib_int::retire(nexusrv_trace_decoder *decoder) {
@@ -136,7 +170,7 @@ uint64_t rv_ib_int::retire(nexusrv_trace_decoder *decoder) {
                     decoder, icnt - insn->size / 2, &event);
     if (retired < 0)
         throw rv_inst_exc_failed{retired};
-    if (retired < icnt - insn->size / 2)
+    if ((uint32_t)retired < icnt - insn->size / 2)
         throw rv_inst_exc_event{addr + retired * 2, event};
     if (event != NEXUSRV_Trace_Event_Trap)
         throw rv_inst_exc_failed{-nexus_trace_mismatch};
@@ -159,6 +193,21 @@ static csh get_csh(cs_arch arch, cs_mode mode) {
     return handle;
 }
 
+auto_cs_insn rv_inst_block::disasm1(shared_ptr<memory_view> vm, uint64_t va, bool rv64) {
+    auto [mapped, len] = vm->try_map(va);
+    if (!mapped)
+        return auto_cs_insn(nullptr, &cs_free1);
+    auto cs_handle = get_csh(CS_ARCH_RISCV,
+                             rv64 ?
+                             (cs_mode)(CS_MODE_RISCV64 | CS_MODE_RISCVC) :
+                             (cs_mode)(CS_MODE_RISCV32 | CS_MODE_RISCVC));
+    cs_insn *insn = nullptr;
+    if (!cs_disasm(cs_handle, mapped, len, va, 1, &insn))
+        error(-1, 0, "failed to decode insn @%" PRIx64 " len=%zu err=%d",
+              va, len, cs_errno(cs_handle));
+    return auto_cs_insn(insn, &cs_free1);
+}
+
 shared_ptr<rv_inst_block> rv_inst_block::fetch(shared_ptr<memory_view> vm, uint64_t va, bool rv64) {
     auto [mapped, len] = vm->try_map(va);
     auto orig_va = va;
@@ -172,9 +221,17 @@ shared_ptr<rv_inst_block> rv_inst_block::fetch(shared_ptr<memory_view> vm, uint6
                              (cs_mode)(CS_MODE_RISCV32 | CS_MODE_RISCVC));
     auto_cs_insn insn(cs_malloc(cs_handle), &cs_free1);
     while (len >= 2) {
-        if (!cs_disasm_iter(cs_handle, &mapped, &len, &va, insn.get()))
-            break;
-        assert(mapped - orig_mapped == orig_len - len);
+        if (!cs_disasm_iter(cs_handle, &mapped, &len, &va, insn.get())) {
+            // Ignore instructions capstone can't handle for now (such as bitmapip)
+            uint8_t b = *mapped;
+            size_t inst_len = ((b & 3) == 3) ? 4 : 2;
+            if (len < inst_len)
+                error(-1, 0, "partial instruction");
+            va += inst_len;
+            mapped += inst_len;
+            len -= inst_len;
+        }
+        assert(mapped == orig_mapped + (orig_len - len));
         assert((mapped - orig_mapped) % 2 == 0);
         auto icnt = (mapped - orig_mapped) / 2;
         auto detail = insn->detail;
@@ -201,12 +258,19 @@ shared_ptr<rv_inst_block> rv_inst_block::fetch(shared_ptr<memory_view> vm, uint6
                     default:
                         assert(false);
                     case 1:
-                        // First operand is omitted (ra)
-                        itype = nexusrv_inst_jal_types(
-                                strcmp(insn->mnemonic, "j") ?
-                                RISCV_REG_RA - RISCV_REG_ZERO : 0);
+                        // First operand is omitted:
+                        //   jal <label> -> jal ra, <label>
+                        //   j   <label> -> jal x0, <label>
+                        if (!strcmp(insn->mnemonic, "j"))
+                            itype = nexusrv_inst_jal_types(0);
+                        else if (!strcmp(insn->mnemonic, "jal"))
+                            itype = nexusrv_inst_jal_types(
+                                    RISCV_REG_RA - RISCV_REG_ZERO);
+                        else
+                            assert(false);
                         break;
                     case 2:
+                        assert(!strcmp(insn->mnemonic, "jal"));
                         assert(rv_detail->operands[0].type == RISCV_OP_REG);
                         itype = nexusrv_inst_jal_types(
                                 rv_detail->operands[0].reg - RISCV_REG_ZERO);
@@ -218,40 +282,59 @@ shared_ptr<rv_inst_block> rv_inst_block::fetch(shared_ptr<memory_view> vm, uint6
                 switch (rv_detail->op_count) {
                     default:
                         assert(false);
-                    case 2:
-                        assert(false);
+                    case 1:
                         assert(rv_detail->operands[0].type == RISCV_OP_REG);
+                        if (!strcmp(insn->mnemonic, "jr"))
+                            itype = nexusrv_inst_jalr_types(
+                                    0,
+                                    rv_detail->operands[0].reg - RISCV_REG_ZERO);
+                        else if (!strcmp(insn->mnemonic, "jalr"))
+                            itype = nexusrv_inst_jalr_types(
+                                    RISCV_REG_RA - RISCV_REG_ZERO,
+                                    rv_detail->operands[0].reg - RISCV_REG_ZERO);
+                        else
+                            assert(false);
+                        break;
+                    case 2:
+                        assert(!strcmp(insn->mnemonic, "jalr"));
+                        assert(rv_detail->operands[0].type == RISCV_OP_REG);
+                        assert(rv_detail->operands[1].type == RISCV_OP_IMM);
                         itype = nexusrv_inst_jalr_types(
                                 RISCV_REG_RA - RISCV_REG_ZERO,
                                 rv_detail->operands[0].reg - RISCV_REG_ZERO);
                         break;
                     case 3:
+                        assert(!strcmp(insn->mnemonic, "jalr"));
                         assert(rv_detail->operands[0].type == RISCV_OP_REG);
                         assert(rv_detail->operands[1].type == RISCV_OP_REG);
+                        assert(rv_detail->operands[2].type == RISCV_OP_IMM);
                         itype = nexusrv_inst_jalr_types(
                                 rv_detail->operands[0].reg - RISCV_REG_ZERO,
                                 rv_detail->operands[1].reg - RISCV_REG_ZERO);
                         break;
                 }
-                assert(rv_detail->operands[lastop].type == RISCV_OP_IMM);
                 break;
             case RISCV_INS_C_J:
+                assert(!strcmp(insn->mnemonic, "c.j"));
                 assert(rv_detail->op_count == 1);
                 assert(rv_detail->operands[0].type == RISCV_OP_IMM);
                 itype = NEXUSRV_ITYPE_Direct_Jump;
                 break;
             case RISCV_INS_C_JR:
+                assert(!strcmp(insn->mnemonic, "c.jr"));
                 assert(rv_detail->op_count == 1);
                 assert(rv_detail->operands[0].type == RISCV_OP_REG);
                 itype = nexusrv_inst_cjr_types(
                         rv_detail->operands[0].reg - RISCV_REG_ZERO);
                 break;
             case RISCV_INS_C_JAL:
+                assert(!strcmp(insn->mnemonic, "c.jal"));
                 assert(rv_detail->op_count == 1);
                 assert(rv_detail->operands[0].type == RISCV_OP_IMM);
                 itype = NEXUSRV_ITYPE_Direct_Call;
                 break;
             case RISCV_INS_C_JALR:
+                assert(!strcmp(insn->mnemonic, "c.jalr"));
                 assert(rv_detail->op_count == 1);
                 assert(rv_detail->operands[0].type == RISCV_OP_REG);
                 itype = nexusrv_inst_cjalr_types(
@@ -273,6 +356,5 @@ shared_ptr<rv_inst_block> rv_inst_block::fetch(shared_ptr<memory_view> vm, uint6
                 return make_shared<rv_ib_ret>(vm, orig_va, icnt, move(insn));
         }
     }
-    error(-1, 0, "failed to decode insn @%" PRIx64 " len=%zu", va, len);
     return nullptr;
 }

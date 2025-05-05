@@ -44,25 +44,5 @@ public:
     };
 };
 
-struct obj_file_store {
-    inline obj_file_store(std::vector<std::string> prefixes,
-                          std::vector<std::string> dbg_prefixes) :
-                          prefixes(std::move(prefixes)),
-                          dbg_prefixes(std::move(dbg_prefixes)) {}
-    std::shared_ptr<obj_file> get(const char *filename,
-                                  bfd_format format = bfd_object) const;
-    std::shared_ptr<obj_file> get_dbg(const char *filename,
-                                      bfd_format format = bfd_object) const;
-    std::shared_ptr<obj_file> get_dbg_buildid(const std::vector<uint8_t>& buildid,
-                                              bfd_format format = bfd_object) const;
-private:
-    static std::shared_ptr<obj_file> search_in(const std::vector<std::string>& dirs,
-                                               const char *filename,
-                                               bfd_format format);
-    std::vector<std::string> prefixes;
-    std::vector<std::string> dbg_prefixes;
-};
-
-std::vector<std::string> split_dirs(const std::string& str);
 
 #endif

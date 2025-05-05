@@ -21,11 +21,12 @@
  * This should be set to match the HW implementation
  */
 typedef struct nexusrv_hw_cfg {
-    unsigned src_bits; /*!< SRC bits */
-    unsigned ts_bits;  /*!< TIMESTAMP bits */
-    bool HTM;          /*!< HTM enabled */
-    bool VAO;          /*!< Virtual Addresses Optimization */
-    bool ext_sifive;   /*!< Sifive Vendor Extension */
+    unsigned src_bits;  /*!< SRC bits */
+    unsigned ts_bits;   /*!< TIMESTAMP bits */
+    unsigned addr_bits; /*!< ADDR bits */
+    bool HTM;           /*!< HTM enabled */
+    bool VAO;           /*!< Virtual Addresses Optimization */
+    bool ext_sifive;    /*!< Sifive Vendor Extension */
 } nexusrv_hw_cfg;
 
 /** @brief NexusRV Message decoder context
@@ -36,7 +37,8 @@ typedef struct nexusrv_hw_cfg {
 typedef struct nexusrv_msg_decoder {
     const nexusrv_hw_cfg *hw_cfg;
     /*!< Hardware/Implementation configuration */
-    int fd; /*!< File descriptor of binary trace file */
+    int fd;             /*!< File descriptor of binary trace file */
+    int16_t src_filter; /*!< Filter SRC ID */
     void *buffer;       /*!< Buffer to hold chunks read from trace file */
     size_t bufsz;       /*!< Buffer size */
     size_t nread;       /*!< Number of bytes read */
@@ -101,17 +103,19 @@ ssize_t nexusrv_msg_decode(const nexusrv_hw_cfg *hwcfg,
  * @param [in,out] decoder The decoder context
  * @param [in] hwcfg HW/Implementation configuration
  * @param fd file descriptor of the trace file
+ * @param src_filter Filter SRC (unfiltered if negative)
  * @param buffer Caller allocated buffer
  * @param bufsz Size of caller allocated buffer
  */
 static inline void nexusrv_msg_decoder_init(nexusrv_msg_decoder *decoder,
                                             const nexusrv_hw_cfg *hwcfg,
-                                            int fd,
+                                            int fd, int16_t src_filter,
                                             uint8_t *buffer,
                                             size_t bufsz) {
     memset(decoder, 0, sizeof(*decoder));
     decoder->hw_cfg = hwcfg;
     decoder->fd = fd;
+    decoder->src_filter = src_filter;
     decoder->buffer = buffer;
     decoder->bufsz = bufsz;
 }

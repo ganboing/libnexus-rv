@@ -5,6 +5,7 @@
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
+#include <functional>
 #include "misc.h"
 
 struct sym_answer {
@@ -15,7 +16,7 @@ struct sym_answer {
 };
 
 struct sym_server {
-    sym_server(const char *filename);
+    sym_server(const char *filename, const char *section = nullptr);
     sym_answer query(uint64_t addr);
     inline ~sym_server() {
         free(line);
@@ -28,5 +29,8 @@ private:
     auto_file read_fp;
     auto_file write_fp;
 };
+
+void sym_iterate_kallsyms(FILE *fp, const std::function<
+        bool(uint64_t, char, const char *, const char*)>&    f);
 
 #endif

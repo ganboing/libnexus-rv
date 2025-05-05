@@ -20,7 +20,7 @@
  */
 typedef struct nexusrv_hist_arr_element {
     uint32_t hist;       /*!< HIST */
-    uint32_t hrepeat;    /*!< HREPEAT */
+    uint32_t repeat;     /*!< HREPEAT or 1 w/o HREPEAT */
     uint64_t timestamp;  /*!< TIMESTAMP (delta) */
 } nexusrv_hist_arr_element;
 
