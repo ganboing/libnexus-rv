@@ -21,12 +21,13 @@
  * This should be set to match the HW implementation
  */
 typedef struct nexusrv_hw_cfg {
-    unsigned src_bits;  /*!< SRC bits */
-    unsigned ts_bits;   /*!< TIMESTAMP bits */
-    unsigned addr_bits; /*!< ADDR bits */
-    bool HTM;           /*!< HTM enabled */
-    bool VAO;           /*!< Virtual Addresses Optimization */
-    bool ext_sifive;    /*!< Sifive Vendor Extension */
+    unsigned src_bits;    /*!< SRC bits */
+    unsigned ts_bits;     /*!< TIMESTAMP bits */
+    unsigned addr_bits;   /*!< ADDR bits */
+    unsigned retstack_sz; /*!< Return stack size */
+    bool HTM;             /*!< HTM enabled */
+    bool VAO;             /*!< Virtual Addresses Optimization */
+    bool ext_sifive;      /*!< Sifive Vendor Extension */
 } nexusrv_hw_cfg;
 
 /** @brief NexusRV Message decoder context

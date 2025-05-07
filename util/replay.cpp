@@ -324,6 +324,7 @@ int main(int argc, char **argv) {
     nexusrv_hw_cfg hwcfg = {};
     hwcfg.ext_sifive = true; // Enable Sifive extension by default
     hwcfg.addr_bits = 48;
+    hwcfg.retstack_sz = 1023;
     int16_t cpu = -1;
     size_t bufsz = DEFAULT_BUFFER_SIZE;
     const char *sysfs = "/sys";

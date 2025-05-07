@@ -29,10 +29,15 @@ int nexusrv_trace_decoder_init(nexusrv_trace_decoder* decoder,
     decoder->res_hists = nexusrv_hist_array_new();
     if (!decoder->res_hists)
         return -nexus_no_mem;
+    int rc = nexusrv_retstack_init(
+            &decoder->return_stack,msg_decoder->hw_cfg->retstack_sz);
+    if (rc < 0)
+        return rc;
     return 0;
 }
 
 void nexusrv_trace_decoder_fini(nexusrv_trace_decoder* decoder) {
+    nexusrv_retstack_fini(&decoder->return_stack);
     nexusrv_hist_array_free(decoder->res_hists);
 }
 

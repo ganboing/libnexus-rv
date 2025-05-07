@@ -135,7 +135,7 @@ uint64_t rv_ib_ret::retire(nexusrv_trace_decoder *decoder) {
 int rv_ib_ret::print(FILE *fp) {
     return rv_inst_block::print(fp) +
         fprintf(fp, "%s [stack:%u->%u]",
-                IRO ? " [implicit]" : "",
+                IRO ? " [implicit]" : " [explicit]",
                 stacksz, IRO ? stacksz - 1 : stacksz);
 }
 
