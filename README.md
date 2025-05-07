@@ -43,5 +43,9 @@ The library providers two utilities and demonstrate the use of Message decoder/e
 * nexusrv-split: Split the NexusRV Messages into per-SRC files
 * nexusrv-replay: Replay the control-flow by decoding the NexusRV Trace
 
+# Demo using P550
+
+Refer to [this doc](./contrib/p550/README.md)
+
 # Bug report
 Post on [github issues](https://github.com/ganboing/libnexus-rv/issues) for bug report and suggestions. Thanks.

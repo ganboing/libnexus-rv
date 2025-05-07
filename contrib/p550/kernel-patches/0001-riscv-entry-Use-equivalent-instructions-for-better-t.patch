@@ -1,0 +1,73 @@
+From 5fe9109b20e26817f9cd98ea2ffa09a70c37968f Mon Sep 17 00:00:00 2001
+From: Bo Gan <ganboing@gmail.com>
+Date: Tue, 6 May 2025 00:45:13 -0700
+Subject: [PATCH] riscv: entry: Use equivalent instructions for better trace
+ collection
+
+P550 trace encoder hard-wires Simple counting for Implicit Return
+Optimization. Thus, we want to make sure there's no return address
+mismatch, so do not use the trick that "returns" to ret_from_exception.
+Use proper function call instead.
+
+For indirect call, avoid using the ra/t0 register, as it'll be
+treated by the trace encoder as function return or coroutine swap,
+and the P550 trace encoder will not emit the indirect branch message.
+Worse, it'll mess up the encoder call stack.
+
+Signed-off-by: Bo Gan <ganboing@gmail.com>
+---
+ arch/riscv/kernel/entry.S | 16 +++++++++-------
+ 1 file changed, 9 insertions(+), 7 deletions(-)
+
+diff --git a/arch/riscv/kernel/entry.S b/arch/riscv/kernel/entry.S
+index 278d01d2911f..a92937a9b05f 100644
+--- a/arch/riscv/kernel/entry.S
++++ b/arch/riscv/kernel/entry.S
+@@ -82,7 +82,6 @@ _save_context:
+ 	la gp, __global_pointer$
+ .option pop
+ 	move a0, sp /* pt_regs */
+-	la ra, ret_from_exception
+ 
+ 	/*
+ 	 * MSB of cause differentiates between
+@@ -91,7 +90,8 @@ _save_context:
+ 	bge s4, zero, 1f
+ 
+ 	/* Handle interrupts */
+-	tail do_irq
++	call do_irq
++	j ret_from_exception
+ 1:
+ 	/* Handle other exceptions */
+ 	slli t0, s4, RISCV_LGPTR
+@@ -100,10 +100,12 @@ _save_context:
+ 	add t0, t1, t0
+ 	/* Check if exception code lies within bounds */
+ 	bgeu t0, t2, 1f
+-	REG_L t0, 0(t0)
+-	jr t0
++	REG_L t1, 0(t0)
++	jalr t1
++	j ret_from_exception
+ 1:
+-	tail do_trap_unknown
++	call do_trap_unknown
++	j ret_from_exception
+ SYM_CODE_END(handle_exception)
+ 
+ /*
+@@ -216,8 +218,8 @@ SYM_CODE_START(ret_from_fork)
+ 	jalr s0
+ 1:
+ 	move a0, sp /* pt_regs */
+-	la ra, ret_from_exception
+-	tail syscall_exit_to_user_mode
++	call syscall_exit_to_user_mode
++	j ret_from_exception
+ SYM_CODE_END(ret_from_fork)
+ 
+ /*
+-- 
+2.34.1
+

@@ -1,0 +1,30 @@
+From f5bdf3f98c1f21c4e52d360442606f6e22ebb21c Mon Sep 17 00:00:00 2001
+From: Bo Gan <ganboing@gmail.com>
+Date: Tue, 6 May 2025 00:42:19 -0700
+Subject: [PATCH 1/2] riscv: enable ARCH_PROC_KCORE_TEXT
+
+This is to enable the dumping of main kernel region through kcore
+
+Signed-off-by: Bo Gan <ganboing@gmail.com>
+---
+ arch/riscv/Kconfig | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/riscv/Kconfig b/arch/riscv/Kconfig
+index 6817e86fffd9..5a9be99ce267 100644
+--- a/arch/riscv/Kconfig
++++ b/arch/riscv/Kconfig
+@@ -239,6 +239,10 @@ config ARCH_SELECT_MEMORY_MODEL
+ config ARCH_SUPPORTS_UPROBES
+ 	def_bool y
+ 
++config ARCH_PROC_KCORE_TEXT
++	def_bool y
++	depends on PROC_KCORE
++
+ config STACKTRACE_SUPPORT
+ 	def_bool y
+ 
+-- 
+2.34.1
+
