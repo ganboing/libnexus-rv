@@ -79,21 +79,25 @@ $(function() {
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &quot;<a class="el" href="msg-decoder_8h_source.html">msg-decoder.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="hist-array_8h_source.html">hist-array.h</a>&quot;</code><br />
+<code>#include &quot;return-stack.h&quot;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for trace-decoder.h:</div>
 <div class="dyncontent">
 <div class="center"><img src="trace-decoder_8h__incl.png" border="0" usemap="#ainclude_2libnexus-rv_2trace-decoder_8h" alt=""/></div>
 <map name="ainclude_2libnexus-rv_2trace-decoder_8h" id="ainclude_2libnexus-rv_2trace-decoder_8h">
-<area shape="rect" title="Trace decoder usage model, events, and common error codes." alt="" coords="227,5,374,47"/>
-<area shape="rect" href="msg-decoder_8h.html" title=" " alt="" coords="193,95,312,121"/>
-<area shape="rect" href="hist-array_8h.html" title=" " alt="" coords="441,169,536,196"/>
-<area shape="rect" href="msg-types_8h.html" title=" " alt="" coords="315,169,417,196"/>
-<area shape="rect" title=" " alt="" coords="489,244,563,271"/>
-<area shape="rect" title=" " alt="" coords="286,244,369,271"/>
-<area shape="rect" title=" " alt="" coords="29,169,95,196"/>
-<area shape="rect" title=" " alt="" coords="120,169,191,196"/>
-<area shape="rect" title=" " alt="" coords="215,169,290,196"/>
-<area shape="rect" title=" " alt="" coords="393,244,464,271"/>
+<area shape="rect" title="Trace decoder usage model, events, and common error codes." alt="" coords="462,5,609,47"/>
+<area shape="rect" href="msg-decoder_8h.html" title=" " alt="" coords="196,95,315,121"/>
+<area shape="rect" href="hist-array_8h.html" title=" " alt="" coords="488,169,583,196"/>
+<area shape="rect" href="return-stack_8h_source.html" title=" " alt="" coords="605,95,719,121"/>
+<area shape="rect" href="msg-types_8h.html" title=" " alt="" coords="24,169,127,196"/>
+<area shape="rect" title=" " alt="" coords="218,244,293,271"/>
+<area shape="rect" title=" " alt="" coords="34,244,117,271"/>
+<area shape="rect" title=" " alt="" coords="151,169,218,196"/>
+<area shape="rect" title=" " alt="" coords="293,169,364,196"/>
+<area shape="rect" title=" " alt="" coords="389,169,463,196"/>
+<area shape="rect" title=" " alt="" coords="500,244,571,271"/>
+<area shape="rect" title=" " alt="" coords="658,169,733,196"/>
+<area shape="rect" title=" " alt="" coords="757,169,828,196"/>
 </map>
 </div>
 </div>
@@ -143,11 +147,15 @@ Enumerations</h2></td></tr>
 <tr class="memitem:aae86bf94eb587e48be2011b138c07f7b"><td class="memItemLeft" align="right" valign="top"><a id="aae86bf94eb587e48be2011b138c07f7b"></a>enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="trace-decoder_8h.html#aae86bf94eb587e48be2011b138c07f7b">nexusrv_trace_events</a> { <br />
 &#160;&#160;<b>NEXUSRV_Trace_Event_None</b>
 , <b>NEXUSRV_Trace_Event_Direct</b>
-, <b>NEXUSRV_Trace_Event_Indirect</b>
-, <b>NEXUSRV_Trace_Event_Sync</b>
+, <b>NEXUSRV_Trace_Event_DirectSync</b>
+, <b>NEXUSRV_Trace_Event_Trap</b>
 , <br />
-&#160;&#160;<b>NEXUSRV_Trace_Event_Stop</b>
-, <b>NEXUSRV_Trace_Event_Error</b>
+&#160;&#160;<b>NEXUSRV_Trace_Event_Indirect</b>
+, <b>NEXUSRV_Trace_Event_IndirectSync</b>
+, <b>NEXUSRV_Trace_Event_Sync</b>
+, <b>NEXUSRV_Trace_Event_Stop</b>
+, <br />
+&#160;&#160;<b>NEXUSRV_Trace_Event_Error</b>
 <br />
  }</td></tr>
 <tr class="memdesc:aae86bf94eb587e48be2011b138c07f7b"><td class="mdescLeft">&#160;</td><td class="mdescRight">NexusRV trace events. <br /></td></tr>
@@ -170,6 +178,15 @@ Functions</h2></td></tr>
 <tr class="memitem:a363e1ddacad3ec47ec9c3370369a3d77"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="trace-decoder_8h.html#a363e1ddacad3ec47ec9c3370369a3d77">nexusrv_trace_next_tnt</a> (<a class="el" href="structnexusrv__trace__decoder.html">nexusrv_trace_decoder</a> *decoder)</td></tr>
 <tr class="memdesc:a363e1ddacad3ec47ec9c3370369a3d77"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the next taken-not-taken.  <a href="trace-decoder_8h.html#a363e1ddacad3ec47ec9c3370369a3d77">More...</a><br /></td></tr>
 <tr class="separator:a363e1ddacad3ec47ec9c3370369a3d77"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4f0e0c2e26078dff6f8145d5e239482d"><td class="memItemLeft" align="right" valign="top"><a id="a4f0e0c2e26078dff6f8145d5e239482d"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>nexusrv_trace_push_call</b> (<a class="el" href="structnexusrv__trace__decoder.html">nexusrv_trace_decoder</a> *decoder, uint64_t callsite)</td></tr>
+<tr class="separator:a4f0e0c2e26078dff6f8145d5e239482d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac501c27020474449089df1329b3867fa"><td class="memItemLeft" align="right" valign="top"><a id="ac501c27020474449089df1329b3867fa"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>nexusrv_trace_pop_ret</b> (<a class="el" href="structnexusrv__trace__decoder.html">nexusrv_trace_decoder</a> *decoder, uint64_t *callsite)</td></tr>
+<tr class="separator:ac501c27020474449089df1329b3867fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac1bbd270cab415e5020fb2137628f6f8"><td class="memItemLeft" align="right" valign="top"><a id="ac1bbd270cab415e5020fb2137628f6f8"></a>
+unsigned&#160;</td><td class="memItemRight" valign="bottom"><b>nexusrv_trace_callstack_used</b> (<a class="el" href="structnexusrv__trace__decoder.html">nexusrv_trace_decoder</a> *decoder)</td></tr>
+<tr class="separator:ac1bbd270cab415e5020fb2137628f6f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af4a7187c839bc77d28338d1c329334c6"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="trace-decoder_8h.html#af4a7187c839bc77d28338d1c329334c6">nexusrv_trace_next_indirect</a> (<a class="el" href="structnexusrv__trace__decoder.html">nexusrv_trace_decoder</a> *decoder, <a class="el" href="structnexusrv__trace__indirect.html">nexusrv_trace_indirect</a> *indirect)</td></tr>
 <tr class="memdesc:af4a7187c839bc77d28338d1c329334c6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the next indirect branch.  <a href="trace-decoder_8h.html#af4a7187c839bc77d28338d1c329334c6">More...</a><br /></td></tr>
 <tr class="separator:af4a7187c839bc77d28338d1c329334c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -187,8 +204,10 @@ Functions</h2></td></tr>
 <div class="textblock"><p>Trace decoder usage model, events, and common error codes. </p>
 <p>The main function is nexusrv_trace_try_retire. The user of the trace decoder is expected to be calling this function a lot. Assuming we are currently synchronized to a code block (a sequence of instructions without branch in between). The caller can try to retire the whole block by calling it, and see how many instructions can be successfully retired before hitting a <em>event</em>. This allows the caller to determine if there's any interrupt/exception occurred in the middle of the block, and if the Direct/Indirect branch or other expected event is pending at the end of the block. The events can then be consumed by calling the corresponding nexusrv_trace_next_x function.</p><ul>
 <li><b>NEXUSRV_Trace_Event_None:</b> In BTM mode, no event pending. In HTM mode, a TNT might be pending. Use nexusrv_trace_next_tnt to retrieve it</li>
-<li><b>NEXUSRV_Trace_Event_Direct:</b> Only in BTM mode, a direct branch is pending. Use nexusrv_trace_next_tnt to retrieve it</li>
-<li><b>NEXUSRV_Trace_Event_Indirect:</b> Use nexusrv_trace_next_indirect to retrieve it</li>
+<li><b>NEXUSRV_Trace_Event_Direct:</b> A direct branch is pending. Use nexusrv_trace_next_tnt to retrieve it</li>
+<li><b>NEXUSRV_Trace_Event_DirectSync:</b> A direct branch+sync is pending. Use nexusrv_trace_next_tnt to retrieve the direct branch, or Use nexusrv_trace_next_sync to retrieve the sync. Note: use nexusrv_trace_next_sync will discard the direct branch.</li>
+<li><b>NEXUSRV_Trace_Event_Indirect:</b> An indirect branch is pending Use nexusrv_trace_next_indirect to retrieve it</li>
+<li><b>NEXUSRV_Trace_Event_IndirectSync:</b> An indirect branch+sync is pending Use nexusrv_trace_next_indirect to retrieve the indirect branch, or Use nexusrv_trace_next_sync to retrieve the sync. Note: use nexusrv_trace_next_sync will discard the indirect branch.</li>
 <li><b>NEXUSRV_Trace_Event_Sync:</b> Use nexusrv_trace_next_sync to retrieve it</li>
 <li><b>NEXUSRV_Trace_Event_Stop:</b> Use nexusrv_trace_next_stop to retrieve it</li>
 <li><b>NEXUSRV_Trace_Event_Error:</b> Use nexusrv_trace_next_error to retrieve it</li>
@@ -606,7 +625,7 @@ Trace decoder returns error codes at different levels:</p><ul>
  Breakdown of events reported: <br  />
  NEXUSRV_Trace_Event_None: None or potentially a TNT (in HTM mode). <br  />
  NEXUSRV_Trace_Event_Direct: Direct branch, use nexusrv_trace_next_tnt to retrieve <br  />
- NEXUSRV_Trace_Event_Indirect: Indirect branch, use nexusrv_trace_next_indirect to retrieve <br  />
+ NEXUSRV_Trace_Event_Trap, NEXUSRV_Trace_Event_Indirect: Indirect branch, use nexusrv_trace_next_indirect to retrieve <br  />
  NEXUSRV_Trace_Event_Sync: Sync event, use nexusrv_trace_next_sync to retrieve <br  />
  NEXUSRV_Trace_Event_Stop: Stop event, use nexusrv_trace_next_stop to retrieve <br  />
  NEXUSRV_Trace_Event_Error: Error event, use nexusrv_trace_next_error to retrieve <br  />

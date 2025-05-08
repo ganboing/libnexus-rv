@@ -1,6 +1,7 @@
 <map id="nexusrv_trace_decoder" name="nexusrv_trace_decoder">
-<area shape="rect" id="node1" title="NexusRV Trace decoder context." alt="" coords="104,184,277,211"/>
+<area shape="rect" id="node1" title="NexusRV Trace decoder context." alt="" coords="192,184,365,211"/>
 <area shape="rect" id="node2" href="$structnexusrv__msg__decoder.html" title="NexusRV Message decoder context." alt="" coords="5,95,173,121"/>
 <area shape="rect" id="node3" href="$structnexusrv__hw__cfg.html" title="NexusRV Message decoder configuration." alt="" coords="26,5,153,32"/>
-<area shape="rect" id="node4" href="$structnexusrv__msg.html" title="Decoded NexusRV Message." alt="" coords="197,95,307,121"/>
+<area shape="rect" id="node4" href="$structnexusrv__return__stack.html" title=" " alt="" coords="197,95,360,121"/>
+<area shape="rect" id="node5" href="$structnexusrv__msg.html" title="Decoded NexusRV Message." alt="" coords="384,95,493,121"/>
 </map>

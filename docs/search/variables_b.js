@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['pos_162',['pos',['../structnexusrv__msg__decoder.html#ae9bcb982b4858c8f13d5b2fca3a44830',1,'nexusrv_msg_decoder']]]
+  ['pos_170',['pos',['../structnexusrv__msg__decoder.html#ae9bcb982b4858c8f13d5b2fca3a44830',1,'nexusrv_msg_decoder']]]
 ];
