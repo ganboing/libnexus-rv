@@ -35,8 +35,7 @@ using namespace std;
 
 static struct option long_opts[] = {
         {"help",      no_argument,       NULL, 'h'},
-        {"tsbits",    required_argument, NULL, 't'},
-        {"srcbits",   required_argument, NULL, 's'},
+        {"hwcfg",     required_argument, NULL, 'w'},
         {"filter",    required_argument, NULL, 'c'},
         {"buffersz",  required_argument, NULL, 'b'},
         {"sysroot",   required_argument, NULL, 'r'},
@@ -48,15 +47,14 @@ static struct option long_opts[] = {
         {NULL, 0,                        NULL, 0},
 };
 
-static const char short_opts[] = "hb:t:s:c:r:d:p:y:u:k";
+static const char short_opts[] = "hw:s:c:r:d:p:y:u:k";
 
 static void help(const char *argv0) {
     error(-1, 0, "Usage: \n"
                   "\t%s: [OPTIONS...] <trace file> or - for stdin\n"
                   "\n"
                   "\t-h, --help            Display this help message\n"
-                  "\t-t, --tsbits [int]    Bits of Timestamp, default 0\n"
-                  "\t-s, --srcbits [int]   Bits of SRC field, default 0\n"
+                  "\t-w, --hwcfg [string]  Hardware Configuration string\n"
                   "\t-c, --filter [int]    Select a particular SRC (hart)\n"
                   "\t-b, --buffersz [int]  Buffer size (default %d)\n"
                   "\t-p, --procfs [path]   Path to procfs (default /proc)\n"
@@ -181,7 +179,7 @@ static void replay(shared_ptr<memory_view> vm, nexusrv_msg_decoder *msg_decoder,
                 lastip.emplace(instblock->retire(&trace_decoder));
                 align_print(&inst_printed, fp, instblock->print(fp));
                 // Indent with stack depth
-                fprintf(fp, "%*s", stack, "");
+                fprintf(fp, " │ %*s", stack, "");
                 print_sym(vm, fp, instblock->addr, &last_func);
                 continue;
             } catch (rv_inst_exc_event& exc_event) {
@@ -322,9 +320,7 @@ done_trace:
 
 int main(int argc, char **argv) {
     nexusrv_hw_cfg hwcfg = {};
-    hwcfg.ext_sifive = true; // Enable Sifive extension by default
-    hwcfg.addr_bits = 48;
-    hwcfg.retstack_sz = 1023;
+    const char *hwcfg_str = "generic64";
     int16_t cpu = -1;
     size_t bufsz = DEFAULT_BUFFER_SIZE;
     const char *sysfs = "/sys";
@@ -334,8 +330,7 @@ int main(int argc, char **argv) {
     auto vm = make_shared<memory_view>();
     OPT_PARSE_BEGIN
     OPT_PARSE_H_HELP
-    OPT_PARSE_T_TSBITS
-    OPT_PARSE_S_SRCBITS
+    OPT_PARSE_W_HWCFG
     OPT_PARSE_C_CPU
     OPT_PARSE_B_BUFSZ
     OPT_PARSE_U_UCORE
@@ -347,6 +342,8 @@ int main(int argc, char **argv) {
     OPT_PARSE_END
     if (argc == optind)
         error(-1, 0, "Insufficient arguments");
+    if (nexusrv_hwcfg_parse(&hwcfg, hwcfg_str))
+        error(-1, 0, "Invalid hwcfg string");
     char *filename = argv[optind];
     int fd = open_seek_file(filename, O_RDONLY | O_CLOEXEC);
     unique_ptr<uint8_t[]> buffer = make_unique<uint8_t[]>(bufsz);

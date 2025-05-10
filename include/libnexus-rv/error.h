@@ -12,6 +12,7 @@ enum nexus_error {
     nexus_ok,
     nexus_no_mem,
     nexus_buffer_too_small,
+    nexus_hwcfg_invalid,
     nexus_stream_bad_mseo,
     nexus_stream_truncate,
     nexus_stream_read_failed,
@@ -32,6 +33,8 @@ static inline const char *str_nexus_error(int err) {
             return "nexus_ok";
         case nexus_no_mem:
             return "nexus_no_mem";
+        case nexus_hwcfg_invalid:
+            return "nexus_hwcfg_invalid";
         case nexus_buffer_too_small:
             return "nexus_buffer_too_small";
         case nexus_stream_bad_mseo:

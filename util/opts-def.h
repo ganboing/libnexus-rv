@@ -19,14 +19,9 @@
             help(argv[0]);                          \
             return 1;
 
-#define OPT_PARSE_T_TSBITS                          \
-        case 't':                                   \
-            hwcfg.ts_bits = atoi(optarg);           \
-            break;
-
-#define OPT_PARSE_S_SRCBITS                         \
-        case 's':                                   \
-            hwcfg.src_bits = atoi(optarg);          \
+#define OPT_PARSE_W_HWCFG                           \
+        case 'w':                                   \
+            hwcfg_str = optarg;                     \
             break;
 
 #define OPT_PARSE_C_CPU                             \

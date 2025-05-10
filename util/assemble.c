@@ -18,22 +18,20 @@
 static struct option long_opts[] = {
         {"help",      no_argument,       NULL, 'h'},
         {"text",      no_argument,       NULL, 'x'},
-        {"tsbits",    required_argument, NULL, 't'},
-        {"srcbits",   required_argument, NULL, 's'},
+        {"hwcfg",     required_argument, NULL, 'w'},
         {NULL, 0,                        NULL, 0},
 };
 
-static const char short_opts[] = "hxts:";
+static const char short_opts[] = "hxw:";
 
 static void help(const char *argv0) {
     error(-1, 0, "Usage: \n"
                 "\t%s: [OPTIONS...] [<output trace file> or stdout if not specified] \n"
                 "\n"
-                "\t-h, --help       Display this help message\n"
-                "\t-t, --tsbits     Bits of Timestamp, default 0\n"
-                "\t-s, --srcbits    Bits of SRC field, default 0\n"
-                "\t-x, --text       Text mode\n",
-          argv0);
+                "\t-h, --help            Display this help message\n"
+                "\t-x, --text            Text mode\n"
+                "\t-w, --hwcfg [string]  Hardware Configuration string\n",
+                argv0);
 }
 
 static void assemble(nexusrv_hw_cfg *hwcfg, FILE *fp, bool text) {
@@ -70,14 +68,16 @@ static void assemble(nexusrv_hw_cfg *hwcfg, FILE *fp, bool text) {
 
 int main(int argc, char **argv) {
     nexusrv_hw_cfg hwcfg = {};
+    const char *hwcfg_str = "generic64";
     bool text = false;
     OPT_PARSE_BEGIN
     OPT_PARSE_H_HELP
-    OPT_PARSE_T_TSBITS
-    OPT_PARSE_S_SRCBITS
+    OPT_PARSE_W_HWCFG
     OPT_PARSE_X_TEXT
     OPT_PARSE_END
     FILE *fp = stdout;
+    if (nexusrv_hwcfg_parse(&hwcfg, hwcfg_str))
+        error(-1, 0, "Invalid hwcfg string");
     if (argc != optind)
         fp = fopen(argv[optind], "wb");
     else

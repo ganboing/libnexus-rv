@@ -75,8 +75,8 @@ hart3-encoder TraceEncoderV0 @103000: configured
 
 Without specifying `-c`, rvtrace will use the default config, which is located
 at `/usr/local/lib/python3.12/dist-packages/rvtrace/platforms/p550.cfg`. If any
-change is required, make a copy of it and use `-c` to specify the modified one
-In the default configuration, HTM is used with maximum periodic
+change is required, make a copy of it and use `-c` to specify the modified one.
+ In the default configuration, HTM is used with maximum periodic SYNC.
 
 ### Install other utilities
 
@@ -140,14 +140,12 @@ Now we know that the CPU 2 corresponds to hart 1, so we can just decode trace of
 Notice the `--filter` switch.
 ```shell
 wkdir$ tar -xvf linux-bundle.tar #Extract the linux bundle
-wkdir$ nexusrv-replay --srcbits 2 --tsbits 40 --filter 1 --procfs proc --sysfs sys --kcore -u core.<pid> trace.bin
+wkdir$ nexusrv-replay --hwcfg model=p550x4,timerfreq=700Mhz --filter 1 --procfs proc --sysfs sys --kcore -u core.<pid> trace.bin
 ```
 
 Explanation of other flags:
-* `--srcbits`: My particular P550 SoC (EIC7700x) use 2 bits to encode SRC field (4 harts in total)
- Your SoC might use different numbr of bits. I expect EIC7702 to use 3 bits (2 DIE, 8 harts)
-* `--tsbits`: Timestamp bits (40). I expect this to be the same across all P550 SoCs. It can
- be retrieved by `sudo rvtrace info`, and use the `width=40` from the timestamping unit of funnel
+* `--hwcfg`: My particular P550 SoC (EIC7700x) is a 4 Hart P550 HW running at 1.4Ghz,
+             and the timer is running at half the frequency, 700Mhz.
 * `--filter`: Filter the trace from a given SRC. In our case, we focus on hart 1 as said before.
 * `--procfs`: The `proc` directory extracted from linux-bundle.tar
 * `--sysfs`: The `sys` directory extracted from linux-bundle.tar

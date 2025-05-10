@@ -144,7 +144,7 @@ uint64_t rv_ib_co_swap::retire(nexusrv_trace_decoder *decoder) {
     IRO = false;
     coswap = false;
     uint64_t target;
-    if (decoder->msg_decoder->hw_cfg->ext_sifive)
+    if (decoder->msg_decoder->hw_cfg->quirk_sifive)
         target = rv_ib_indir_call::retire(decoder);
     else {
         coswap = true;
@@ -158,7 +158,7 @@ uint64_t rv_ib_co_swap::retire(nexusrv_trace_decoder *decoder) {
 int rv_ib_co_swap::print(FILE *fp) {
     return rv_inst_block::print(fp) +
         fprintf(fp, "%s%s [stack:%u->%u]",
-                IRO ? " [implicit]" : "",
+                IRO ? " [implicit]" : " [explicit]",
                 coswap ? " [coswap]" : "",
                 stack0, stack1);
 }
@@ -222,7 +222,7 @@ shared_ptr<rv_inst_block> rv_inst_block::fetch(shared_ptr<memory_view> vm, uint6
     auto_cs_insn insn(cs_malloc(cs_handle), &cs_free1);
     while (len >= 2) {
         if (!cs_disasm_iter(cs_handle, &mapped, &len, &va, insn.get())) {
-            // Ignore instructions capstone can't handle for now (such as bitmapip)
+            // Ignore instructions capstone can't handle for now (such as bitmanip)
             uint8_t b = *mapped;
             size_t inst_len = ((b & 3) == 3) ? 4 : 2;
             if (len < inst_len)

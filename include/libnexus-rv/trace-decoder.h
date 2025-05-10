@@ -220,10 +220,16 @@ void nexusrv_trace_decoder_fini(nexusrv_trace_decoder* decoder);
  * @return The timestamp
  */
 static inline uint64_t nexusrv_trace_time(nexusrv_trace_decoder* decoder) {
-    unsigned ts_bits = decoder->msg_decoder->hw_cfg->ts_bits;
-    if (ts_bits >= 64)
-        return decoder->timestamp;
-    return decoder->timestamp & (((uint64_t)1 << ts_bits) - 1);
+    const nexusrv_hw_cfg *hwcfg = decoder->msg_decoder->hw_cfg;
+    uint64_t time = decoder->timestamp;
+    if (hwcfg->ts_bits < 64)
+        time &= (((uint64_t)1 << hwcfg->ts_bits) - 1);
+    if (hwcfg->timer_freq) {
+        unsigned __int128 normalized = time;
+        normalized *= 1000UL * 1000 * 1000;
+        time = normalized / hwcfg->timer_freq;
+    }
+    return time;
 }
 
 /** @brief Try to retire \p icnt from trace.
@@ -291,11 +297,11 @@ int nexusrv_trace_sync_reset(nexusrv_trace_decoder* decoder,
  */
 int nexusrv_trace_next_tnt(nexusrv_trace_decoder *decoder);
 
-void nexusrv_trace_push_call(nexusrv_trace_decoder* decoder,
-                             uint64_t callsite);
+int nexusrv_trace_push_call(nexusrv_trace_decoder* decoder,
+                            uint64_t callsite);
 
 int nexusrv_trace_pop_ret(nexusrv_trace_decoder* decoder,
-                           uint64_t *callsite);
+                          uint64_t *callsite);
 
 unsigned nexusrv_trace_callstack_used(nexusrv_trace_decoder* decoder);
 

@@ -1,5 +1,7 @@
 # Decoder/Encoder Library for RISC-V Nexus Trace
 
+Github: https://github.com/ganboing/libnexus-rv
+
 This library implements the decoder/encoder of RISC-V Nexus Trace (1.0 Ratified spec).
 It's inspired by the [Reference Code](https://github.com/riscv-non-isa/tg-nexus-trace/tree/1.0_Ratified/refcode/c).
 It works at two levels -- The Nexus Message level, and the Nexus Trace level.
@@ -10,6 +12,12 @@ keep track of Hart states like a HW Nexus encoder working in reverse. A caller w
 of program execution context, including the instructions being executed, can interactively
 reconstruct the control-flow by asking the Trace encoder to retire a certain number of instructions,
 and check for pending events. (See API documentation)
+
+## Demo on P550
+
+To get a rough idea of how decoded trace looks like, refer to this
+[HOW-TO doc for trace on p550](https://github.com/ganboing/libnexus-rv/tree/master/contrib/p550#observe-trace-of-userspace--kernel--firmware)
+It's able to provide you with instruction level full-system trace.
 
 ## Build
 
@@ -42,10 +50,6 @@ The library providers two utilities and demonstrate the use of Message decoder/e
 * nexusrv-assemble: Assemble NexusRV Messages from human-readable text
 * nexusrv-split: Split the NexusRV Messages into per-SRC files
 * nexusrv-replay: Replay the control-flow by decoding the NexusRV Trace
-
-# Demo using P550
-
-Refer to [this doc](./contrib/p550/README.md)
 
 # Bug report
 Post on [github issues](https://github.com/ganboing/libnexus-rv/issues) for bug report and suggestions. Thanks.

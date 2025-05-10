@@ -13,6 +13,80 @@
 #include <libnexus-rv/internal/protocol.h>
 #include "misc.h"
 
+#define MODEL_HWCFG_GENERIC32 "addr=32,maxstack=32"
+#define MODEL_HWCFG_GENERIC64 "addr=64,maxstack=32"
+#define MODEL_HWCFG_P550x4 "src=2,ts=40,addr=48,maxstack=1024,quirk-sifive"
+#define MODEL_HWCFG_P550x8 "src=2,ts=40,addr=48,maxstack=1024,quirk-sifive"
+
+static int __nexusrv_hwcfg_parse(nexusrv_hw_cfg *hwcfg,
+                                 char *str) {
+    char *sep = NULL;
+    for (char *opt = str; opt; opt = sep) {
+        sep = strchr(opt, ',');
+        if (sep)
+            *sep++ = '\0';
+        if (!*opt)
+            continue;
+        bool negate = false;
+        if (!strncmp(opt, "no-", 3)) {
+            negate = true;
+            opt += 3;
+        }
+        if (!strncmp(opt, "ts=", 3))
+            hwcfg->ts_bits = atoi(opt + 3);
+        else if (!strncmp(opt, "src=", 4))
+            hwcfg->src_bits = atoi(opt + 4);
+        else if (!strncmp(opt, "addr=", 5))
+            hwcfg->addr_bits = atoi(opt + 5);
+        else if (!strncmp(opt, "maxstack=", 9))
+            hwcfg->max_stack = atoi(opt + 9);
+        else if (!strcmp(opt, "quirk-sifive"))
+            hwcfg->quirk_sifive = !negate;
+        else if (!strncmp(opt, "timerfreq=", 10)) {
+            char *end;
+            hwcfg->timer_freq = strtoul(opt + 10, &end, 10);
+            if (!hwcfg->timer_freq)
+                return -nexus_hwcfg_invalid;
+            if (!strcmp(end, "GHz"))
+                hwcfg->timer_freq *= 1000ULL * 1000 * 1000;
+            else if (!strcmp(end, "Mhz"))
+                hwcfg->timer_freq *= 1000ULL * 1000;
+            else if (!strcmp(end, "Khz"))
+                hwcfg->timer_freq *= 1000;
+            else if (strcmp(end, "Hz"))
+                return -nexus_hwcfg_invalid;
+        } else if (!strncmp(opt, "model=", 6)) {
+            opt += 6;
+            int rc = -nexus_hwcfg_invalid;
+            if (!strcmp(opt, "generic32")) {
+                char model_cfg[] = MODEL_HWCFG_GENERIC32;
+                rc = __nexusrv_hwcfg_parse(hwcfg, model_cfg);
+            } else if (!strcmp(opt, "generic64")) {
+                char model_cfg[] = MODEL_HWCFG_GENERIC64;
+                rc = __nexusrv_hwcfg_parse(hwcfg, model_cfg);
+            } else if (!strcmp(opt, "p550x4")) {
+                char model_cfg[] = MODEL_HWCFG_P550x4;
+                rc = __nexusrv_hwcfg_parse(hwcfg, model_cfg);
+            } else if (!strcmp(opt, "p550x8")) {
+                char model_cfg[] = MODEL_HWCFG_P550x8;
+                rc = __nexusrv_hwcfg_parse(hwcfg, model_cfg);
+            }
+            if (rc < 0)
+                return rc;
+        } else
+            return -nexus_hwcfg_invalid;
+    }
+    return 0;
+}
+
+int nexusrv_hwcfg_parse(nexusrv_hw_cfg *hwcfg,
+                        const char *str) {
+    char cfg[strlen(str) + 1];
+    strcpy(cfg, str);
+    memset(hwcfg, 0, sizeof(*hwcfg));
+    return __nexusrv_hwcfg_parse(hwcfg, cfg);
+}
+
 ssize_t nexusrv_sync_forward(const uint8_t *buffer, size_t limit) {
     for (size_t consumed = 0; consumed < limit;) {
         nexusrv_msg_byte msg_byte = {buffer[consumed++]};

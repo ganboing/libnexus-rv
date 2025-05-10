@@ -24,10 +24,11 @@ typedef struct nexusrv_hw_cfg {
     unsigned src_bits;    /*!< SRC bits */
     unsigned ts_bits;     /*!< TIMESTAMP bits */
     unsigned addr_bits;   /*!< ADDR bits */
-    unsigned retstack_sz; /*!< Return stack size */
+    unsigned max_stack;   /*!< Max return stack size */
+    uint64_t timer_freq;  /*!< Timer Frequency */
     bool HTM;             /*!< HTM enabled */
     bool VAO;             /*!< Virtual Addresses Optimization */
-    bool ext_sifive;      /*!< Sifive Vendor Extension */
+    bool quirk_sifive;    /*!< Sifive quirks for pre-1.0 encoder */
 } nexusrv_hw_cfg;
 
 /** @brief NexusRV Message decoder context
@@ -47,6 +48,32 @@ typedef struct nexusrv_msg_decoder {
     size_t pos;         /*!< Currently consumed bytes in buffer */
     size_t lastmsg_len; /*!< Length of last message in buffer */
 } nexusrv_msg_decoder;
+
+/*! @brief Parse the hwcfg string into hwcfg structure
+ *
+ * string is in the format of \<option\>,\<option\>=\<value\>,...
+ *  Supported options:
+ *  - \b model= \<string\>: HW model. It predefines a set of option values
+ *   * model=\a generic32 implies: addr=32,stack=32
+ *   * model=\a generic64 implies: addr=64,stack=32
+ *   * model=\a p550x4 implies: src=2,ts=40,addr=48,stack=1023,ext-sifive
+ *   * model=\a p550x8 implies: src=3,ts=40,addr=48,stack=1023,ext-sifive
+ *  - \b ts= \<integer\>: Number of Timestamp bits
+ *  - \b src= \<integer\>: Number of SRC bits
+ *  - \b addr= \<integer\>: Width of ADDR reported
+ *  - \b maxstack= \<integer\>: Upper-bound of return stack depth
+ *  - \b timerfreq= \<integer Hz/KHz/MHz/GHz\>: Timer frequency
+ *  - \b quirk-sifive: Use Sifive Trace quirks
+ *  - \b no-quirk-sifive: Disable Sifive Trace quirks (if enabled previously)
+ *
+ * @param [out] hwcfg parsed hwcfg
+ * @param [in] str hwcfg string
+ * @retval ==0: Parse successful
+ * @retval -nexus_hwcfg_invalid:
+ *   The hwcfg string is invalid
+ */
+int nexusrv_hwcfg_parse(nexusrv_hw_cfg *hwcfg,
+                        const char *str);
 
 /** Maximum standard Message size in raw bytes */
 #define NEXUS_RV_MSG_MAX_BYTES 38

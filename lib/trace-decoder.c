@@ -30,7 +30,7 @@ int nexusrv_trace_decoder_init(nexusrv_trace_decoder* decoder,
     if (!decoder->res_hists)
         return -nexus_no_mem;
     int rc = nexusrv_retstack_init(
-            &decoder->return_stack,msg_decoder->hw_cfg->retstack_sz);
+            &decoder->return_stack,msg_decoder->hw_cfg->max_stack);
     if (rc < 0)
         return rc;
     return 0;
@@ -89,7 +89,7 @@ static int nexusrv_trace_fetch_msg(nexusrv_trace_decoder *decoder) {
 
 static void nexusrv_trace_retire_timestamp(nexusrv_trace_decoder *decoder,
                                            uint64_t *timestamp) {
-    if (decoder->msg_decoder->hw_cfg->ext_sifive) {
+    if (decoder->msg_decoder->hw_cfg->quirk_sifive) {
         decoder->timestamp ^= *timestamp;
         *timestamp = 0;
     } else
@@ -202,8 +202,8 @@ static int nexusrv_trace_pull_msg(nexusrv_trace_decoder *decoder) {
         element.hist = decoder->msg.hist;
         if(decoder->msg.hrepeat)
             element.repeat = decoder->msg.hrepeat;
-    } else if (decoder->msg_decoder->hw_cfg->ext_sifive) {
-        // Sifive Extension
+    } else if (decoder->msg_decoder->hw_cfg->quirk_sifive) {
+        // Sifive quirks
         switch (decoder->msg.res_code) {
             case 8:
                 element.hist = 0b10;
@@ -381,17 +381,14 @@ int nexusrv_trace_next_tnt(nexusrv_trace_decoder *decoder) {
     return true;
 }
 
-void nexusrv_trace_push_call(nexusrv_trace_decoder* decoder,
-                             uint64_t callsite) {
-    nexusrv_retstack_push(&decoder->return_stack, callsite);
+int nexusrv_trace_push_call(nexusrv_trace_decoder* decoder,
+                            uint64_t callsite) {
+    return nexusrv_retstack_push(&decoder->return_stack, callsite);
 }
 
 int nexusrv_trace_pop_ret(nexusrv_trace_decoder* decoder,
                           uint64_t *callsite) {
-    if (!nexusrv_retstack_used(&decoder->return_stack))
-        return -nexus_trace_retstack_empty;
-    *callsite = nexusrv_retstack_pop(&decoder->return_stack);
-    return 1;
+    return nexusrv_retstack_pop(&decoder->return_stack, callsite);
 }
 
 unsigned nexusrv_trace_callstack_used(nexusrv_trace_decoder* decoder) {
