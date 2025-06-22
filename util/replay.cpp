@@ -169,38 +169,44 @@ static void replay(shared_ptr<memory_view> vm, nexusrv_msg_decoder *msg_decoder,
             instblock = it->second;
         }
         if (instblock) {
+            event = NEXUSRV_Trace_Event_None;
+            unsigned stack = nexusrv_trace_callstack_used(&trace_decoder);
+            try {
+                lastip.emplace(instblock->retire(&trace_decoder));
+            } catch (rv_inst_exc_event& exc_event) {
+                event = exc_event.event;
+                lastip.emplace(exc_event.addr);
+                assert(event != NEXUSRV_Trace_Event_None);
+                assert(*lastip >= instblock->addr &&
+                       *lastip - instblock->addr < instblock->icnt * 2);
+            } catch (rv_inst_exc_failed& failed) {
+                rc = failed.rc;
+                assert(rc < 0);
+                goto handle_error;
+            }
             align_print(&addr_printed, fp, fprintf(fp,
                         FMT_TIME_OFFSET " 0x%" PRIx64 ",+%" PRIu32 "  ",
                         nexusrv_trace_time(&trace_decoder),
                         nexusrv_msg_decoder_offset(msg_decoder),
-                        *lastip, instblock->icnt));
-            try {
-                unsigned stack = nexusrv_trace_callstack_used(&trace_decoder);
-                lastip.emplace(instblock->retire(&trace_decoder));
+                        instblock->addr, instblock->icnt));
+            if (event == NEXUSRV_Trace_Event_None) {
                 align_print(&inst_printed, fp, instblock->print(fp));
                 // Indent with stack depth
                 fprintf(fp, " │ %*s", stack, "");
                 print_sym(vm, fp, instblock->addr, &last_func);
                 continue;
-            } catch (rv_inst_exc_event& exc_event) {
-                lastip.emplace(exc_event.addr);
-                event = exc_event.event;
-                assert(*lastip >= instblock->addr &&
-                        *lastip - instblock->addr < instblock->icnt * 2);
-                auto insn = rv_inst_block::disasm1(vm, *lastip, true);
-                align_print(&inst_printed, fp, fprintf(
-                        fp, "[retired %" PRIu64 "] %s%s%s",
-                        (*lastip - instblock->addr) / 2,
-                        insn ? insn->mnemonic : "",
-                        insn ? " " : "",
-                        insn ? insn->op_str : ""));
-                goto handle_event;
-            } catch (rv_inst_exc_failed& failed) {
-                rc = failed.rc;
-                assert(rc < 0);
             }
+            auto insn = rv_inst_block::disasm1(vm, *lastip, true);
+            align_print(&inst_printed, fp, fprintf(
+                    fp, "[retired %" PRIu64 "] %s%s%s",
+                    (*lastip - instblock->addr) / 2,
+                    insn ? insn->mnemonic : "",
+                    insn ? " " : "",
+                    insn ? insn->op_str : ""));
+            goto handle_event;
         } else
             rc = nexusrv_trace_try_retire(&trace_decoder, UINT32_MAX, &event);
+handle_error:
         if (rc < 0) switch (rc) {
             case -nexus_trace_eof:
                 goto done_trace;
@@ -311,6 +317,7 @@ unknown_msg:
             error(-rc, 0, "msg_decoder_next failed: %s",
                   str_nexus_error(-rc));
         assert(rc > 0);
+        nexusrv_trace_add_timestamp(&trace_decoder, msg.timestamp);
         fprintf(fp, "\n[%" PRIu64 "] UNKNOWN MSG ", nexusrv_trace_time(&trace_decoder));
         nexusrv_print_msg(fp, &msg);
     }
