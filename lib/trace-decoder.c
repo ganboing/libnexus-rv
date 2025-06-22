@@ -514,3 +514,8 @@ int nexusrv_trace_next_stop(nexusrv_trace_decoder *decoder, nexusrv_trace_stop *
     decoder->synced = 0;
     return 1;
 }
+
+void nexusrv_trace_add_timestamp(nexusrv_trace_decoder *decoder,
+                                 uint64_t timestamp) {
+    nexusrv_trace_retire_timestamp(decoder, &timestamp);
+}

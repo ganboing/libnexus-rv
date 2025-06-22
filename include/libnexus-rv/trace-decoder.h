@@ -345,4 +345,16 @@ int nexusrv_trace_next_error(nexusrv_trace_decoder *decoder,
 int nexusrv_trace_next_stop(nexusrv_trace_decoder *decoder,
                             nexusrv_trace_stop *stop);
 
+/** @brief Add(retire) the timestamp to decoder
+ *
+ * For scenarios where the trace decoder doesn't recognize the message,
+ * and delegate it to the caller, the caller should use this function
+ * to add the timestamp back to the trace decoder, if any.
+ *
+ * @param [in] decoder decoder The decoder context
+ * @param [in] timestamp The timestamp from the Message
+ */
+void nexusrv_trace_add_timestamp(nexusrv_trace_decoder *decoder,
+                                 uint64_t timestamp);
+
 #endif
