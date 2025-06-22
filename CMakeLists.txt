@@ -25,3 +25,5 @@ add_subdirectory(lib)
 if (UTIL)
   add_subdirectory(util)
 endif (UTIL)
+
+install(DIRECTORY contrib USE_SOURCE_PERMISSIONS DESTINATION ${CMAKE_INSTALL_DOCDIR})
