@@ -1,6 +1,6 @@
-// SPDX-License-Identifer: Apache 2.0
+// SPDX-License-Identifier: Apache 2.0
 /*
- * dump.c - Message dumper utility that drives decoder.
+ * dump.c - Message dumper utility that drives message decoder.
  *
  *  Copyright (C) 2025, Bo Gan <ganboing@gmail.com>
  */

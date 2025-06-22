@@ -1,5 +1,7 @@
-// SPDX-License-Identifer: Apache 2.0
+// SPDX-License-Identifier: Apache 2.0
 /*
+ * msg-format.h - NexusRV message formats
+ *
  *  Copyright (C) 2025, Bo Gan <ganboing@gmail.com>
  */
 

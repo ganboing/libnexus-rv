@@ -1,6 +1,6 @@
-// SPDX-License-Identifer: Apache 2.0
+// SPDX-License-Identifier: Apache 2.0
 /*
- * encoder.h - NexusRV encoder functions and declarations
+ * msg-encoder.h - NexusRV Message encoder functions and declarations
  *
  *  Copyright (C) 2025, Bo Gan <ganboing@gmail.com>
  */

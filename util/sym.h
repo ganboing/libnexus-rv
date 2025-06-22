@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: Apache 2.0
+/*
+ *  Copyright (C) 2025, Bo Gan <ganboing@gmail.com>
+ */
+
 #ifndef LIBNEXUS_RV_SYM_H
 #define LIBNEXUS_RV_SYM_H
 

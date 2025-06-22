@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: Apache 2.0
+/*
+ * inst-helper.h - Helper classifying instruction types
+ *
+ *  Copyright (C) 2025, Bo Gan <ganboing@gmail.com>
+ */
+
 #ifndef LIBNEXUS_RV_INST_HELPER_H
 #define LIBNEXUS_RV_INST_HELPER_H
 

@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: Apache 2.0
+/*
+ * inst.cpp - Instruction abstraction
+ *
+ *  Copyright (C) 2025, Bo Gan <ganboing@gmail.com>
+ */
+
 #include <cassert>
 #include <error.h>
 #include <capstone.h>

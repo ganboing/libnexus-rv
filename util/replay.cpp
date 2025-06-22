@@ -1,4 +1,4 @@
-// SPDX-License-Identifer: Apache 2.0
+// SPDX-License-Identifier: Apache 2.0
 /*
  * replay.c - Trace replayer utility that drives trace decoder
  *

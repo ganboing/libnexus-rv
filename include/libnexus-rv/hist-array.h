@@ -1,4 +1,4 @@
-// SPDX-License-Identifer: Apache 2.0
+// SPDX-License-Identifier: Apache 2.0
 /*
  * hist-array.h - HIST array structure and functions
  *

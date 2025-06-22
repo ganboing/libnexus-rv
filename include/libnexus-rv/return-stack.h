@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: Apache 2.0
+/*
+ * return-stack.h - NexusRV return stack
+ *
+ *  Copyright (C) 2025, Bo Gan <ganboing@gmail.com>
+ */
+
 #ifndef LIBNEXUS_RV_RETURN_STACK_H
 #define LIBNEXUS_RV_RETURN_STACK_H
 

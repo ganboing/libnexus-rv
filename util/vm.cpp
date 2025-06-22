@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: Apache 2.0
+/*
+ * vm.cpp - Abstraction of virtual memory
+ *
+ *  Copyright (C) 2025, Bo Gan <ganboing@gmail.com>
+ */
+
 #include <error.h>
 #include "vm.h"
 #include "linux.h"

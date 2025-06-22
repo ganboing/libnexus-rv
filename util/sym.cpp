@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: Apache 2.0
+/*
+ * sym.cpp - Symbol resolver
+ *
+ *  Copyright (C) 2025, Bo Gan <ganboing@gmail.com>
+ */
+
 #include <error.h>
 #include <algorithm>
 #include <cinttypes>

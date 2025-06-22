@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: Apache 2.0
+/*
+ * trace-decoder.h - NexusRV Trace decoder functions and declarations
+ *
+ *  Copyright (C) 2025, Bo Gan <ganboing@gmail.com>
+ */
+
 #ifndef LIBNEXUS_RV_TRACE_DECODER_H
 #define LIBNEXUS_RV_TRACE_DECODER_H
 

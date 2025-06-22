@@ -1,6 +1,6 @@
-// SPDX-License-Identifer: Apache 2.0
+// SPDX-License-Identifier: Apache 2.0
 /*
- * assumble.c - Message assembler utility that drives encoder.
+ * assumble.c - Message assembler utility that drives message encoder.
  *
  *  Copyright (C) 2025, Bo Gan <ganboing@gmail.com>
  */

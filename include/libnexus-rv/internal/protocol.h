@@ -1,4 +1,4 @@
-// SPDX-License-Identifer: Apache 2.0
+// SPDX-License-Identifier: Apache 2.0
 /*
  * protocol.h - MESO/MDO protocol definition
  *

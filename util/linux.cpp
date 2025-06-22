@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: Apache 2.0
+/*
+ * linux.cpp - Linux corefile and obj file store
+ *
+ *  Copyright (C) 2025, Bo Gan <ganboing@gmail.com>
+ */
+
 #include <bfd.h>
 #include <error.h>
 #include <cstring>

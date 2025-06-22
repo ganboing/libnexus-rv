@@ -1,4 +1,4 @@
-// SPDX-License-Identifer: Apache 2.0
+// SPDX-License-Identifier: Apache 2.0
 /*
  * error.h - common error codes returned by decoder functions
  *
