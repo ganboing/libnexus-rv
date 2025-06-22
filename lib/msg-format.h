@@ -17,6 +17,8 @@
 #define NEXUS_FMT_OWNER_CONTEXT " CONTEXT=0x%" PRIx64
 #define NEXUS_FMT_ERROR_ETYPE   " ETYPE=%u"
 #define NEXUS_FMT_ERROR_ECODE   " ECODE=0x%" PRIx32
+#define NEXUS_FMT_DA_IDTAG      " IDTAG=%u"
+#define NEXUS_FMT_DA_DQDATA     " DQDATA=0x%" PRIx64
 #define NEXUS_FMT_ICNT          " ICNT=%" PRIu32
 #define NEXUS_FMT_BCNT          " BCNT=%" PRIu32
 #define NEXUS_FMT_SYNC          " SYNC=%u"

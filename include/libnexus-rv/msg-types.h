@@ -41,6 +41,7 @@ enum nexusrv_tcodes {
     NEXUSRV_TCODE_DirectBranch              = 3,
     NEXUSRV_TCODE_IndirectBranch            = 4,
     NEXUSRV_TCODE_Error                     = 8,
+    NEXUSRV_TCODE_DataAcquisition           = 7,
     NEXUSRV_TCODE_ProgTraceSync             = 9,
     NEXUSRV_TCODE_DirectBranchSync          = 11,
     NEXUSRV_TCODE_IndirectBranchSync        = 12,
@@ -64,6 +65,8 @@ static inline const char* nexusrv_tcode_str(enum nexusrv_tcodes tcode) {
             return "IndirectBranch";
         case NEXUSRV_TCODE_Error:
             return "Error";
+        case NEXUSRV_TCODE_DataAcquisition:
+            return "DataAcquisition";
         case NEXUSRV_TCODE_ProgTraceSync:
             return "ProgTraceSync";
         case NEXUSRV_TCODE_DirectBranchSync:
@@ -113,6 +116,9 @@ typedef struct nexusrv_msg {
             uint8_t ownership_priv : 2; /*!< PROCESS.PRV field */
             uint8_t ownership_v : 1;    /*!< PROCESS.V field */
         };
+        struct {
+            uint8_t idtag : 3;      /*!< IDTAG field */
+        };
     };
     union {
         uint32_t icnt;        /*!< I-CNT field */
@@ -122,8 +128,9 @@ typedef struct nexusrv_msg {
     uint32_t hist;     /*!< HIST field */
     uint32_t hrepeat;  /*!< HREPEAT field, or synthesized  HREPEAT */
     union {
-        uint64_t xaddr;   /*!< x-ADDR */
+        uint64_t xaddr;   /*!< X-ADDR */
         uint64_t context; /*!< PROCESS.CONTEXT */
+        uint64_t dqdata;  /*!< DQDATA */
     };
 } nexusrv_msg;
 
@@ -139,6 +146,7 @@ static inline bool nexusrv_msg_known(const nexusrv_msg *msg) {
         case NEXUSRV_TCODE_IndirectBranchHistSync:
         case NEXUSRV_TCODE_RepeatBranch:
         case NEXUSRV_TCODE_Error:
+        case NEXUSRV_TCODE_DataAcquisition:
         case NEXUSRV_TCODE_Ownership:
         case NEXUSRV_TCODE_ProgTraceSync:
             return true;
@@ -205,6 +213,10 @@ static inline bool nexusrv_msg_is_error(const nexusrv_msg *msg) {
 
 static inline bool nexusrv_msg_is_stop(const nexusrv_msg *msg) {
     return msg->tcode == NEXUSRV_TCODE_ProgTraceCorrelation;
+}
+
+static inline bool nexusrv_msg_is_data_acq(const nexusrv_msg *msg) {
+    return msg->tcode == NEXUSRV_TCODE_DataAcquisition;
 }
 
 static inline bool nexusrv_msg_has_icnt(const nexusrv_msg *msg) {

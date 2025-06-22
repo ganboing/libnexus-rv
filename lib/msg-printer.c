@@ -33,6 +33,7 @@ int nexusrv_print_msg(FILE *fp, const nexusrv_msg *msg) {
             return printed;
         case NEXUSRV_TCODE_Ownership:
         case NEXUSRV_TCODE_Error:
+        case NEXUSRV_TCODE_DataAcquisition:
         case NEXUSRV_TCODE_ResourceFull:
         case NEXUSRV_TCODE_RepeatBranch:
         case NEXUSRV_TCODE_ProgTraceCorrelation:
@@ -70,6 +71,13 @@ handle_rest:
                     NEXUS_FMT_ERROR_ECODE,
                     msg->error_type,
                     msg->error_code);
+            break;
+        case NEXUSRV_TCODE_DataAcquisition:
+            printed += CHECK_PRINTF(
+                    NEXUS_FMT_DA_IDTAG
+                    NEXUS_FMT_DA_DQDATA,
+                    msg->idtag,
+                    msg->dqdata);
             break;
         case NEXUSRV_TCODE_ResourceFull:
             printed += CHECK_PRINTF(NEXUS_FMT_RCODE, msg->res_code);

@@ -258,6 +258,11 @@ handle_rest:
             UNPACK_FIXED(NEXUS_RV_BITS_ETYPE, msg->error_type);
             UNPACK_VAR(msg->error_code);
             break;
+        case NEXUSRV_TCODE_DataAcquisition:
+            UNPACK_VAR_REQ(msg->idtag);
+            CONSUME_BYTES();
+            UNPACK_VAR_REQ(msg->dqdata);
+            break;
         case NEXUSRV_TCODE_ResourceFull:
             UNPACK_FIXED(NEXUS_RV_BITS_RCODE, msg->res_code);
             if (msg->res_code > 2) {

@@ -44,6 +44,8 @@ void nexusrv_trace_decoder_fini(nexusrv_trace_decoder* decoder) {
 static bool nexusrv_trace_check_msg(const nexusrv_msg *msg) {
     if (!nexusrv_msg_known(msg))
         return false;
+    if (nexusrv_msg_is_data_acq(msg))
+        return false;
     if (nexusrv_msg_has_icnt(msg) && msg->icnt > MSG_ICNT_MAX)
         return false;
     if (nexusrv_msg_has_hist(msg) && !msg->hist)
