@@ -219,15 +219,15 @@ linux_ucore::linux_ucore(const char *filename,
     }
 }
 
-tuple<const std::string*, const std::string*, uint64_t>
+tuple<const std::string*, uint64_t>
 linux_ucore::get_file_backing(uint64_t vma) {
     auto it = mmap_backing.upper_bound(vma);
     if (it == mmap_backing.begin())
-        return no_map_or_sym;
+        return no_map;
     --it;
     if (vma - it->first >= it->second.size)
-        return no_map_or_sym;
-    return make_tuple(it->second.filename, nullptr,
+        return no_map;
+    return make_tuple(it->second.filename,
                      vma - it->first + it->second.file_offset);
 }
 
@@ -307,10 +307,9 @@ linux_kcore::linux_kcore(const char *procfs,
 }
 
 tuple<const std::string*, const std::string*, uint64_t>
-linux_kcore::get_file_backing(uint64_t vma) {
+linux_kcore::get_file_vma(uint64_t vma) {
     if (vma >= vmlinux_start && vma < vmlinux_end)
-        //XXX: hard-code the offset for now
-        return make_tuple(&str_kernel, nullptr, vma - vmlinux_start + 0x1000);
+        return make_tuple(&str_kernel, nullptr, vma);
     // modules/BPF are 2GB below vmlinux
     auto mod_start = vmlinux_start - (2ULL << 30);
     if (vma < mod_start || vma >= vmlinux_end)

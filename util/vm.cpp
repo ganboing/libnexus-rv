@@ -37,7 +37,10 @@ tuple<shared_ptr<obj_file>, const string*, uint64_t> memory_view::query_sym(uint
     if (vma - it->first >= it->second.asection->size)
         return no_map_or_sym;
     auto core = it->second.core;
-    auto [filename, filesection, fileoff] = core->get_file_backing(vma);
+    auto [fn1, fileoff] = core->get_file_backing(vma);
+    auto [fn2, filesection, sectionvma] = core->get_file_vma(vma);
+    // Use file offset if present
+    auto filename = fn1 ? fn1 : fn2;
     if (!filename)
         return no_map_or_sym;
     auto& cache = backed_file_cache[core];
@@ -56,14 +59,17 @@ tuple<shared_ptr<obj_file>, const string*, uint64_t> memory_view::query_sym(uint
         it2 = cache.emplace(filename, make_pair(bin, dbg)).first;
     }
     auto [bin, dbg] = it2->second;
-    // Without section offsets, binary must be found to produce the correct VA
-    if (!bin && !filesection)
-        return no_map_or_sym;
+    if (fn1) {
+        // Use file offset if present
+        // Binary must be found to produce the correct VMA from offset
+        if (!bin)
+            return no_map_or_sym;
+        return make_tuple(dbg ? dbg : bin, nullptr, bin->fileoff_to_va(fileoff));
+    }
     // If neither binary nor debug info is found, just return null
     if (!bin && !dbg)
         return no_map_or_sym;
-    return make_tuple(dbg ? dbg : bin, filesection,
-                      filesection ? fileoff : bin->fileoff_to_va(fileoff));
+    return make_tuple(dbg ? dbg : bin, filesection, sectionvma);
 }
 
 tuple<const string*, const string*, uint64_t> memory_view::query_label(uint64_t vma) {

@@ -8,6 +8,7 @@
 #include <filesystem>
 #include "objfile.h"
 
+auto constexpr no_map = std::make_tuple(nullptr, 0);
 auto constexpr no_map_or_sym = std::make_tuple(nullptr, nullptr, 0);
 
 struct linux_file_store : std::enable_shared_from_this<linux_file_store> {
@@ -51,9 +52,14 @@ struct linux_file_backing {
 
 struct core_file : obj_file {
     inline core_file(const char *filename) : obj_file(filename, bfd_core) {}
-    /* <Filename, Section name, File offset> */
-    inline virtual std::tuple<const std::string*, const std::string*, uint64_t>
+    /* <Filename, File offset> */
+    inline virtual std::tuple<const std::string*, uint64_t>
         get_file_backing(uint64_t) {
+        return std::tuple(nullptr, 0);
+    }
+    /* <Filename, Section name, Section offset or VMA> */
+    inline virtual std::tuple<const std::string*, const std::string*, uint64_t>
+        get_file_vma(uint64_t) {
         return std::tuple(nullptr, nullptr, 0);
     }
     /* <Label, Module, Address> */
@@ -87,7 +93,7 @@ struct linux_ucore : linux_core_file {
     linux_ucore(const char *filename,
                 std::vector<std::string> sysroot_dirs = {},
                 std::vector<std::string> dbg_dirs = {});
-    std::tuple<const std::string*, const std::string*, uint64_t>
+    std::tuple<const std::string*, uint64_t>
         get_file_backing(uint64_t vma) override;
 private:
     std::set<std::string> file_names;
@@ -102,7 +108,7 @@ struct linux_kcore : linux_core_file {
                 std::vector<std::string> sysroot_dirs = {},
                 std::vector<std::string> dbg_dirs = {});
     std::tuple<const std::string*, const std::string*, uint64_t>
-        get_file_backing(uint64_t vma) override;
+        get_file_vma(uint64_t vma) override;
     std::tuple<const std::string*, const std::string*, uint64_t>
         get_label(uint64_t) override;
 private:
