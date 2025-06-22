@@ -3,24 +3,12 @@
 set -eu
 
 if [[ $# -lt 1 ]]; then
-  echo "Usage: $0 <System.map or kallsyms>" >&2
+  echo "Usage: $0 <ADDR>" >&2
   exit 1
 fi
 
 DIR="$(readlink -f "$(dirname "$0")")"
-KSYMS="$1"
-
-sym_addr() {
-  local addr
-  addr="$(sed -nE "s/([0-9a-f]+) T $1\$/\1/p" "$KSYMS")"
-  if [[ "$addr" == "" ]]; then
-    echo "Unable to find symbol $1" >&2
-    return 1
-  fi
-  echo "0x$addr"
-}
-
-addr___switch_to="$(sym_addr __switch_to)"
+ADDR="$1"
 
 CPUS=( 0 1 2 3 )
 MCONTROL6_LOAD=0x1
@@ -44,12 +32,14 @@ gen_openocd_scr() {
     $MCONTROL6_S | \
     $MCONTROL6_DMODE | \
     ($MCONTROL6_TRACE_SYNC << $MCONTROL6_ACT_SHIFT) )) )
-  local tdata2=$addr___switch_to
+  local tdata2="$ADDR"
   for cpu in "${CPUS[@]}"; do
     for wp in 0 1 2; do
       echo -n "riscv.cpu$cpu set_reg {tselect $wp tdata1 0 tdata2 0};"
     done
     echo -n "riscv.cpu$cpu set_reg {tselect 3 tdata1 $tdata1 tdata2 $tdata2};"
+    echo -n "riscv.cpu$cpu riscv set_ebreaku off;"
+    echo -n "riscv.cpu$cpu riscv set_ebreaks off;"
   done
   echo -n "resume; exit;"
 }
