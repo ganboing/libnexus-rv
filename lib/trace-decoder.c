@@ -322,7 +322,7 @@ int32_t nexusrv_trace_try_retire(nexusrv_trace_decoder *decoder,
         rc = nexusrv_trace_pull_msg(decoder);
         if (rc < 0)
             return rc;
-        // Try again, as we have consumed something
+        // Try again, as we may have consumed something
     }
     assert(decoder->msg_present);
     // Consume as much as possible
@@ -364,15 +364,17 @@ int32_t nexusrv_trace_try_retire(nexusrv_trace_decoder *decoder,
 int nexusrv_trace_next_tnt(nexusrv_trace_decoder *decoder) {
     if (!decoder->synced)
         return -nexus_trace_not_synced;
-    int rc;
-    do {
+    int rc = 1;
+    for (;;) {
         if (nexusrv_trace_available_tnts(decoder))
             return nexusrv_trace_consume_tnt(decoder);
+        if (!rc)
+            break;
         rc = nexusrv_trace_pull_msg(decoder);
         if (rc < 0)
             return rc;
-        // Try again, as we have consumed something
-    } while(rc);
+        // Try again, as we may have consumed something
+    }
     assert(decoder->msg_present);
     if (nexusrv_trace_available_icnt(decoder))
         return false;
