@@ -254,7 +254,7 @@ linux_kcore::linux_kcore(const char *procfs,
                          vector<string> sysroot_dirs,
                          vector<string> dbg_dirs) :
         linux_core_file(cppfmt("%s/kcore", procfs).c_str()) {
-    vmlinux_start = vmlinux_end = bpf_start = 0;
+    vmlinux_start = vmlinux_end = bpf_start = kaslr_offset = 0;
     auto_file fkallsyms(fopen(cppfmt(
             "%s/kallsyms", procfs).c_str(), "r"), &fclose);
     if (!fkallsyms)
@@ -278,6 +278,14 @@ linux_kcore::linux_kcore(const char *procfs,
     kernel_release = move(release_str);
     store = make_shared<linux_kmods_file_store>(
             move(sysroot_dirs), move(dbg_dirs), move(kernel_version));
+    auto vmlinux = store->get(str_kernel.c_str());
+    if (vmlinux) {
+        // Takes care of KASLR offset
+        auto &sections = vmlinux->get_sec_by_name();
+        auto it = sections.find(".head.text"sv);
+        if (it != sections.end())
+            kaslr_offset = vmlinux_start - it->second->vma;
+    }
     directory_iterator di(cppfmt("%s/module", sysfs));
     for (auto& dentry : di) {
         auto& path = dentry.path();
@@ -315,8 +323,9 @@ linux_kcore::linux_kcore(const char *procfs,
 
 tuple<const std::string*, const std::string*, uint64_t>
 linux_kcore::get_file_vma(uint64_t vma) {
-    if (vma >= vmlinux_start && vma < vmlinux_end)
-        return make_tuple(&str_kernel, nullptr, vma);
+    if (vma >= vmlinux_start && vma < vmlinux_end) {
+        return make_tuple(&str_kernel, nullptr, vma - kaslr_offset);
+    }
     // modules/BPF are 2GB below vmlinux
     auto mod_start = vmlinux_start - (2ULL << 30);
     if (vma < mod_start || vma >= vmlinux_end)

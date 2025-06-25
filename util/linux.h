@@ -16,17 +16,15 @@
 auto constexpr no_map = std::make_tuple(nullptr, 0);
 auto constexpr no_map_or_sym = std::make_tuple(nullptr, nullptr, 0);
 
-struct linux_file_store : std::enable_shared_from_this<linux_file_store> {
+struct linux_file_store : objfile_store {
     inline linux_file_store(std::vector<std::string> prefixes,
                             std::vector<std::string> dbg_prefixes) :
             prefixes(std::move(prefixes)),
             dbg_prefixes(std::move(dbg_prefixes)) {}
-    virtual std::shared_ptr<obj_file> get(
-            const char *filename) const;
-    virtual std::shared_ptr<obj_file> get_dbg(
-            const char *filename) const;
+    std::shared_ptr<obj_file> get(const char *filename) const override;
+    std::shared_ptr<obj_file> get_dbg(const char *filename) const override;
     std::shared_ptr<obj_file> get_dbg_buildid(
-            const std::vector<uint8_t>& buildid) const;
+            const std::vector<uint8_t>& buildid) const override;
 protected:
     static std::shared_ptr<obj_file> search_in(const std::vector<std::string>& dirs,
                                                const char *filename,
@@ -55,27 +53,6 @@ struct linux_file_backing {
     const std::string *filename;
 };
 
-struct core_file : obj_file {
-    inline core_file(const char *filename) : obj_file(filename, bfd_core) {}
-    /* <Filename, File offset> */
-    inline virtual std::tuple<const std::string*, uint64_t>
-        get_file_backing(uint64_t) {
-        return std::tuple(nullptr, 0);
-    }
-    /* <Filename, Section name, Section offset or VMA> */
-    inline virtual std::tuple<const std::string*, const std::string*, uint64_t>
-        get_file_vma(uint64_t) {
-        return std::tuple(nullptr, nullptr, 0);
-    }
-    /* <Label, Module, Address> */
-    inline virtual std::tuple<const std::string*, const std::string*, uint64_t>
-        get_label(uint64_t) {
-        return std::tuple(nullptr, nullptr, 0);
-    }
-    inline virtual std::shared_ptr<linux_file_store> obj_store() const {
-        return nullptr;
-    }
-};
 
 struct linux_core_file : core_file {
     inline linux_core_file(const char *filename) :
@@ -87,7 +64,7 @@ struct linux_core_file : core_file {
         store = std::make_shared<linux_file_store>(
                         std::move(sysroot_dirs), std::move(dbg_dirs));
     }
-    inline std::shared_ptr<linux_file_store> obj_store() const override {
+    inline std::shared_ptr<objfile_store> obj_store() override {
         return store;
     }
 protected:
@@ -120,6 +97,7 @@ private:
     uint64_t vmlinux_start;
     uint64_t vmlinux_end;
     uint64_t bpf_start;
+    uint64_t kaslr_offset;
     std::string kernel_release;
     std::set<std::string> kallsyms_mods;
     std::multimap<uint64_t, std::tuple<std::string, char, const std::string*> > kallsyms;
