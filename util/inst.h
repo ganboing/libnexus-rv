@@ -34,8 +34,11 @@ struct rv_inst_block : std::enable_shared_from_this<rv_inst_block> {
     static auto_cs_insn disasm1(
             std::shared_ptr<memory_view> vm, uint64_t addr, bool rv64);
     virtual uint64_t retire(nexusrv_trace_decoder *decoder);
-    inline virtual int print(FILE* fp) {
+    inline virtual int print(FILE* fp) const {
         return fprintf(fp, "%s %s", insn->mnemonic, insn->op_str);
+    }
+    inline virtual std::string to_string() const {
+        return cppfmt("%s %s", insn->mnemonic, insn->op_str);
     }
 protected:
     unsigned check_exc(nexusrv_trace_decoder *decoder);
@@ -69,7 +72,8 @@ struct rv_ib_cond_branch : rv_ib_dir_jmp {
     using rv_ib_dir_jmp::rv_ib_dir_jmp;
     inline ~rv_ib_cond_branch() {}
     uint64_t retire(nexusrv_trace_decoder *decoder) override;
-    int print(FILE *fp) override;
+    int print(FILE *fp) const override;
+    std::string to_string() const override;
 protected:
     mutable bool taken;
 };
@@ -78,7 +82,8 @@ struct rv_ib_dir_call : rv_ib_dir_jmp {
     using rv_ib_dir_jmp::rv_ib_dir_jmp;
     inline ~rv_ib_dir_call() {}
     uint64_t retire(nexusrv_trace_decoder *decoder) override;
-    int print(FILE* fp) override;
+    int print(FILE *fp) const override;
+    std::string to_string() const override;
 protected:
     mutable unsigned stack0;
     mutable unsigned stack1;
@@ -100,7 +105,8 @@ struct rv_ib_indir_call : virtual rv_ib_indir_jmp {
     using rv_ib_indir_jmp::rv_ib_indir_jmp;
     inline ~rv_ib_indir_call() {}
     uint64_t retire(nexusrv_trace_decoder *decoder) override;
-    int print(FILE* fp) override;
+    int print(FILE *fp) const override;
+    std::string to_string() const override;
 protected:
     inline rv_ib_indir_call() : rv_ib_indir_jmp(
             nullptr, 0, 0, auto_cs_insn(nullptr, &cs_free1)) {}
@@ -112,7 +118,8 @@ struct rv_ib_ret : virtual rv_ib_indir_jmp {
     using rv_ib_indir_jmp::rv_ib_indir_jmp;
     inline ~rv_ib_ret() {}
     uint64_t retire(nexusrv_trace_decoder *decoder) override;
-    int print(FILE* fp) override;
+    int print(FILE *fp) const override;
+    std::string to_string() const override;
 protected:
     inline rv_ib_ret() : rv_ib_indir_jmp(
             nullptr, 0, 0, auto_cs_insn(nullptr, &cs_free1)) {}
@@ -127,7 +134,8 @@ struct rv_ib_co_swap : rv_ib_ret, rv_ib_indir_call {
             rv_ib_indir_jmp(vm, addr, icnt, std::move(insn)) {}
     inline ~rv_ib_co_swap() {}
     uint64_t retire(nexusrv_trace_decoder *decoder) override;
-    int print(FILE* fp) override;
+    int print(FILE *fp) const override;
+    std::string to_string() const override;
 protected:
     mutable bool coswap;
 };

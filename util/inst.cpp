@@ -78,9 +78,15 @@ uint64_t rv_ib_cond_branch::retire(nexusrv_trace_decoder *decoder) {
     return addr + icnt * 2 - insn->size + off;
 }
 
-int rv_ib_cond_branch::print(FILE *fp) {
+int rv_ib_cond_branch::print(FILE *fp) const {
     return rv_inst_block::print(fp) +
         fprintf(fp, "%s", taken ? " [taken]" : "");
+}
+
+string rv_ib_cond_branch::to_string() const {
+    return cppfmt("%s %s%s",
+        insn->mnemonic, insn->op_str,
+        taken ? " [taken]" : "");
 }
 
 uint64_t rv_ib_dir_call::retire(nexusrv_trace_decoder *decoder) {
@@ -91,9 +97,15 @@ uint64_t rv_ib_dir_call::retire(nexusrv_trace_decoder *decoder) {
     return target;
 }
 
-int rv_ib_dir_call::print(FILE *fp) {
+int rv_ib_dir_call::print(FILE *fp) const {
     return rv_inst_block::print(fp) +
         fprintf(fp, " [stack:%u->%u]", stack0, stack1);
+}
+
+string rv_ib_dir_call::to_string() const {
+    return cppfmt("%s %s [stack:%u->%u]",
+        insn->mnemonic, insn->op_str,
+        stack0, stack1);
 }
 
 uint64_t rv_ib_indir_jmp::retire(nexusrv_trace_decoder *decoder) {
@@ -115,9 +127,15 @@ uint64_t rv_ib_indir_call::retire(nexusrv_trace_decoder *decoder) {
     return target;
 }
 
-int rv_ib_indir_call::print(FILE *fp) {
+int rv_ib_indir_call::print(FILE *fp) const {
     return rv_inst_block::print(fp) +
         fprintf(fp, " [stack:%u->%u]", stack0, stack1);
+}
+
+string rv_ib_indir_call::to_string() const {
+    return cppfmt("%s %s [stack:%u->%u]",
+        insn->mnemonic, insn->op_str,
+        stack0, stack1);
 }
 
 uint64_t rv_ib_ret::retire(nexusrv_trace_decoder *decoder) {
@@ -139,11 +157,18 @@ uint64_t rv_ib_ret::retire(nexusrv_trace_decoder *decoder) {
     return target;
 }
 
-int rv_ib_ret::print(FILE *fp) {
+int rv_ib_ret::print(FILE *fp) const {
     return rv_inst_block::print(fp) +
         fprintf(fp, "%s [stack:%u->%u]",
                 IRO ? " [implicit]" : " [explicit]",
                 stacksz, IRO ? stacksz - 1 : stacksz);
+}
+
+string rv_ib_ret::to_string() const {
+    return cppfmt("%s %s%s [stack:%u->%u]",
+        insn->mnemonic, insn->op_str,
+        IRO ? " [implicit]" : " [explicit]",
+        stacksz, IRO ? stacksz - 1 : stacksz);
 }
 
 uint64_t rv_ib_co_swap::retire(nexusrv_trace_decoder *decoder) {
@@ -162,12 +187,20 @@ uint64_t rv_ib_co_swap::retire(nexusrv_trace_decoder *decoder) {
     return target;
 }
 
-int rv_ib_co_swap::print(FILE *fp) {
+int rv_ib_co_swap::print(FILE *fp) const {
     return rv_inst_block::print(fp) +
         fprintf(fp, "%s%s [stack:%u->%u]",
                 IRO ? " [implicit]" : " [explicit]",
                 coswap ? " [coswap]" : "",
                 stack0, stack1);
+}
+
+string rv_ib_co_swap::to_string() const {
+    return cppfmt("%s %s%s%s [stack:%u->%u]",
+        insn->mnemonic, insn->op_str,
+        IRO ? " [implicit]" : " [explicit]",
+        coswap ? " [coswap]" : "",
+        stack0, stack1);
 }
 
 uint64_t rv_ib_int::retire(nexusrv_trace_decoder *decoder) {
