@@ -80,6 +80,12 @@
                 sysroot_dirs, dbg_dirs));           \
             break;
 
+#define OPT_PARSE_E_ELF                             \
+        case 'e':                                   \
+            vm->load_core(make_shared<elf_file>(    \
+                optarg));                           \
+            break;
+
 #define OPT_PARSE_END                               \
         default:                                    \
             return 1;                               \

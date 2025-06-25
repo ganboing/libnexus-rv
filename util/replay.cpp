@@ -38,16 +38,17 @@ static struct option long_opts[] = {
         {"hwcfg",     required_argument, NULL, 'w'},
         {"filter",    required_argument, NULL, 'c'},
         {"buffersz",  required_argument, NULL, 'b'},
+        {"elf",       required_argument, NULL, 'e'},
         {"sysroot",   required_argument, NULL, 'r'},
         {"debugdir",  required_argument, NULL, 'd'},
         {"procfs",    required_argument, NULL, 'p'},
         {"sysfs",     required_argument, NULL, 'y'},
         {"ucore",     required_argument, NULL, 'u'},
-        {"kcore",    no_argument,       NULL, 'k'},
+        {"kcore",     no_argument,       NULL, 'k'},
         {NULL, 0,                        NULL, 0},
 };
 
-static const char short_opts[] = "hw:s:c:r:d:p:y:u:k";
+static const char short_opts[] = "hw:s:c:b:e:r:d:p:y:u:k";
 
 static void help(const char *argv0) {
     error(-1, 0, "Usage: \n"
@@ -57,6 +58,7 @@ static void help(const char *argv0) {
                   "\t-w, --hwcfg [string]  Hardware Configuration string\n"
                   "\t-c, --filter [int]    Select a particular SRC (hart)\n"
                   "\t-b, --buffersz [int]  Buffer size (default %d)\n"
+                  "\t-e, --elf [path]      Path to ELF file to load as core/symbol\n"
                   "\t-p, --procfs [path]   Path to procfs (default /proc)\n"
                   "\t-y, --sysfs [path]    Path to sysfs (default /sys)\n"
                   "\t-r, --sysroot [path:path:...]\n"
@@ -346,6 +348,7 @@ int main(int argc, char **argv) {
     OPT_PARSE_P_PROCFS
     OPT_PARSE_Y_SYSFS
     OPT_PARSE_K_KCORE
+    OPT_PARSE_E_ELF
     OPT_PARSE_END
     if (argc == optind)
         error(-1, 0, "Insufficient arguments");
