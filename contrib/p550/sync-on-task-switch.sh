@@ -12,7 +12,7 @@ KSYMS="$1"
 
 sym_addr() {
   local addr
-  addr="$(sed -nE "s/([0-9a-f]+) T $1\$/\1/p" "$KSYMS")"
+  addr="$(sed -nE "s/([0-9a-f]+) [Tt] $1\$/\1/p" "$KSYMS")"
   if [[ "$addr" == "" ]]; then
     echo "Unable to find symbol $1" >&2
     return 1
@@ -20,4 +20,7 @@ sym_addr() {
   echo "0x$addr"
 }
 
-exec "$DIR/trace-sync-on-addr.sh" "$(sym_addr __switch_to)"
+exec "$DIR/trace-sync-on-addr.sh" \
+  "$(sym_addr __switch_to)" \
+  "$(sym_addr __kvm_switch_enter)" \
+  "$(sym_addr __kvm_switch_return)"
