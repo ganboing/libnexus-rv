@@ -303,6 +303,15 @@ handle_rest:
                 UNPACK_VAR_REQ(msg->hist);
             }
             break;
+        case NEXUSRV_TCODE_ICT:
+            UNPACK_FIXED(NEXUS_RV_BITS_CKSRC, msg->cksrc);
+            UNPACK_FIXED(NEXUS_RV_BITS_CKDF, msg->ckdf);
+            UNPACK_VAR_REQ(msg->ckdata0);
+            if (msg->ckdf > 0) {
+                CONSUME_BYTES();
+                UNPACK_VAR_REQ(msg->ckdata1);
+            }
+            break;
     }
 finished_common:
     if (hwcfg->ts_bits && eom) {

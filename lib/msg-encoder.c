@@ -192,6 +192,14 @@ handle_rest:
             if (msg->cdf)
                 PACK_VAR_REQ(msg->hist);
             break;
+        case NEXUSRV_TCODE_ICT:
+            PACK_FIXED(NEXUS_RV_BITS_CKSRC, msg->cksrc);
+            PACK_FIXED(NEXUS_RV_BITS_CKDF, msg->ckdf);
+            PACK_VAR_REQ(msg->ckdata0);
+            if (msg->ckdf > 1)
+                return -nexus_msg_unsupported;
+            PACK_VAR_REQ(msg->ckdata1);
+            break;
     }
 finished_common:
     if (hwcfg->ts_bits) {

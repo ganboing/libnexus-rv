@@ -32,5 +32,9 @@
 #define NEXUS_FMT_HREPEAT       " HREPEAT=%" PRIu32
 #define NEXUS_FMT_EVCODE        " EVCODE=%u"
 #define NEXUS_FMT_CDF           " CDF=%u"
+#define NEXUS_FMT_CKSRC         " CKSRC=%u"
+#define NEXUS_FMT_CKDF          " CKDF=%u"
+#define NEXUS_FMT_CKDATA0       " CKDATA0=0x%" PRIx64
+#define NEXUS_FMT_CKDATA1       " CKDATA1=0x%" PRIx64
 
 #endif

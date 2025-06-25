@@ -87,7 +87,7 @@ handle_rest:
         case NEXUSRV_TCODE_RepeatBranch:
             CHECK_SCANF(NEXUS_FMT_HREPEAT, uint32_t, msg->hrepeat);
             break;
-        case NEXUSRV_TCODE_ProgTraceCorrelation: {
+        case NEXUSRV_TCODE_ProgTraceCorrelation:
             msg->icnt = 0;
             msg->hist = 0;
             msg->hrepeat = 0;
@@ -97,7 +97,13 @@ handle_rest:
             if (msg->cdf == 1)
                 CHECK_SCANF(NEXUS_FMT_HIST, uint32_t, msg->hist);
             break;
-        }
+        case NEXUSRV_TCODE_ICT:
+            CHECK_SCANF(NEXUS_FMT_CKSRC, unsigned, msg->cksrc);
+            CHECK_SCANF(NEXUS_FMT_CKDF, unsigned, msg->ckdf);
+            CHECK_SCANF(NEXUS_FMT_CKDATA0, uint64_t, msg->ckdata0);
+            if (msg->ckdf > 0)
+                CHECK_SCANF(NEXUS_FMT_CKDATA1, uint64_t, msg->ckdata1);
+            break;
     }
     return 0;
 }

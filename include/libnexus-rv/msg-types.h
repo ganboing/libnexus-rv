@@ -33,6 +33,10 @@
 #define NEXUS_RV_BITS_OWNERSHIP_PRV 2
 /** Number of PROCESS.V bits */
 #define NEXUS_RV_BITS_OWNERSHIP_V 1
+/** Number of CKSRC bits */
+#define NEXUS_RV_BITS_CKSRC 4
+/** Number of CKDF bits */
+#define NEXUS_RV_BITS_CKDF 2
 
 /** @brief TCODE enumeration
  */
@@ -49,6 +53,7 @@ enum nexusrv_tcodes {
     NEXUSRV_TCODE_IndirectBranchHist        = 28,
     NEXUSRV_TCODE_IndirectBranchHistSync    = 29,
     NEXUSRV_TCODE_RepeatBranch              = 30,
+    NEXUSRV_TCODE_ICT                       = 34,
     NEXUSRV_TCODE_ProgTraceCorrelation      = 33,
     NEXUSRV_TCODE_VendorStart               = 56,
     NEXUSRV_TCODE_VendorLast                = 62,
@@ -81,6 +86,8 @@ static inline const char* nexusrv_tcode_str(enum nexusrv_tcodes tcode) {
             return "IndirectBranchHistSync";
         case NEXUSRV_TCODE_RepeatBranch:
             return "RepeatBranch";
+        case NEXUSRV_TCODE_ICT:
+            return "ICT";
         case NEXUSRV_TCODE_ProgTraceCorrelation:
             return "ProgTraceCorrelation";
         case NEXUSRV_TCODE_Idle:
@@ -119,18 +126,28 @@ typedef struct nexusrv_msg {
         struct {
             uint8_t idtag : 3;      /*!< IDTAG field */
         };
+        struct {
+            uint8_t cksrc : 4;      /*!< CKSRC field */
+            uint8_t ckdf : 2;       /*!< CKDF field */
+        };
     };
     union {
         uint32_t icnt;        /*!< I-CNT field */
         uint32_t error_code;  /*!< ECODE field */
         uint32_t res_data;    /*!< RDATA field */
     };
-    uint32_t hist;     /*!< HIST field */
-    uint32_t hrepeat;  /*!< HREPEAT field, or synthesized  HREPEAT */
     union {
-        uint64_t xaddr;   /*!< X-ADDR */
-        uint64_t context; /*!< PROCESS.CONTEXT */
-        uint64_t dqdata;  /*!< DQDATA */
+        struct {
+            uint32_t hist;     /*!< HIST field */
+            uint32_t hrepeat;  /*!< HREPEAT field, or synthesized  HREPEAT */
+        };
+        uint64_t ckdata0;      /*!< CKDATA0 */
+    };
+    union {
+        uint64_t xaddr;        /*!< X-ADDR */
+        uint64_t context;      /*!< PROCESS.CONTEXT */
+        uint64_t dqdata;       /*!< DQDATA */
+        uint64_t ckdata1;      /*!< CKDATA1 */
     };
 } nexusrv_msg;
 
@@ -152,6 +169,8 @@ static inline bool nexusrv_msg_known(const nexusrv_msg *msg) {
             return true;
         case NEXUSRV_TCODE_ProgTraceCorrelation:
             return msg->cdf < 2;
+        case NEXUSRV_TCODE_ICT:
+            return msg->cksrc < 2;
         default:
             return false;
     }

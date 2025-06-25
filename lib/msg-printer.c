@@ -37,6 +37,7 @@ int nexusrv_print_msg(FILE *fp, const nexusrv_msg *msg) {
         case NEXUSRV_TCODE_ResourceFull:
         case NEXUSRV_TCODE_RepeatBranch:
         case NEXUSRV_TCODE_ProgTraceCorrelation:
+        case NEXUSRV_TCODE_ICT:
             goto handle_rest;
         default:
             break;
@@ -113,6 +114,18 @@ handle_rest:
                     msg->icnt);
             if (msg->cdf == 1)
                 printed += CHECK_PRINTF(NEXUS_FMT_HIST, msg->hist);
+            break;
+        case NEXUSRV_TCODE_ICT:
+            printed += CHECK_PRINTF(
+                    NEXUS_FMT_CKSRC
+                    NEXUS_FMT_CKDF
+                    NEXUS_FMT_CKDATA0,
+                    msg->cksrc,
+                    msg->ckdf,
+                    msg->ckdata0
+                );
+            if (msg->ckdf > 0)
+                printed += CHECK_PRINTF(NEXUS_FMT_CKDATA1, msg->ckdata1);
             break;
     }
     return printed;
