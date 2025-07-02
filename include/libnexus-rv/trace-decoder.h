@@ -239,6 +239,13 @@ static inline uint64_t nexusrv_trace_time(nexusrv_trace_decoder* decoder) {
     return time;
 }
 
+/** @brief Get the available I-CNT before needing to fetch new messages
+ *
+ * @param [in] decoder The decoder context
+ * @return I-CNT
+ */
+uint32_t nexusrv_trace_available_icnt(nexusrv_trace_decoder *decoder);
+
 /** @brief Try to retire \p icnt from trace.
  *
  * This is the main function the trace encoder provides. Usually it's

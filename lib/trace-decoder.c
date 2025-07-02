@@ -154,7 +154,7 @@ static bool nexusrv_trace_consume_tnt(nexusrv_trace_decoder *decoder) {
     return tnt;
 }
 
-static uint32_t nexusrv_trace_available_icnt(nexusrv_trace_decoder *decoder) {
+uint32_t nexusrv_trace_available_icnt(nexusrv_trace_decoder *decoder) {
     uint32_t icnt = decoder->res_icnt;
     if (!decoder->msg_present)
         goto done_msg;
