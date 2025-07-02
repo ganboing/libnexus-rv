@@ -177,8 +177,9 @@ static void replay(shared_ptr<memory_view> vm, nexusrv_msg_decoder *msg_decoder,
                 event = exc_event.event;
                 lastip.emplace(exc_event.addr);
                 assert(event != NEXUSRV_Trace_Event_None);
+                // It's possible the event is right after the inst block
                 assert(*lastip >= instblock->addr &&
-                       *lastip - instblock->addr < instblock->icnt * 2);
+                       *lastip - instblock->addr <= instblock->icnt * 2);
             } catch (rv_inst_exc_failed& failed) {
                 rc = failed.rc;
                 assert(rc < 0);

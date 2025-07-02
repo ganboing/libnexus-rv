@@ -32,8 +32,11 @@ uint64_t rv_inst_block::retire(nexusrv_trace_decoder *decoder) {
 unsigned rv_inst_block::check_exc(nexusrv_trace_decoder *decoder) {
     unsigned event;
     int32_t retired = nexusrv_trace_try_retire(decoder, icnt, &event);
-    if (retired < 0)
+    if (retired < 0) {
+        error(0, 0, "Trying to retire %u icnt, but failed: %s",
+            icnt, str_nexus_error(retired));
         throw rv_inst_exc_failed{retired};
+    }
     if ((uint32_t)retired < icnt) {
         switch (event) {
             // Expect these messages at any given i-cnt
@@ -68,7 +71,14 @@ uint64_t rv_ib_dir_jmp::retire(nexusrv_trace_decoder *decoder) {
 }
 
 uint64_t rv_ib_cond_branch::retire(nexusrv_trace_decoder *decoder) {
-    check_exc(decoder);
+    auto event = check_exc(decoder);
+    if (event == NEXUSRV_Trace_Event_Error) {
+        /* The Error event is right after
+         * We can't tell whether we should have got the
+         * DirectBranch or not. Thus, we are unable to retire the block
+         */
+        throw rv_inst_exc_event{addr + icnt * 2, event};
+    }
     int tnt = nexusrv_trace_next_tnt(decoder);
     if (tnt < 0)
         throw rv_inst_exc_failed{tnt};
@@ -110,8 +120,11 @@ string rv_ib_dir_call::to_string() const {
 
 uint64_t rv_ib_indir_jmp::retire(nexusrv_trace_decoder *decoder) {
     auto event = check_exc(decoder);
-    if (event != NEXUSRV_Trace_Event_Indirect)
+    if (event != NEXUSRV_Trace_Event_Indirect) {
+        error(0, 0, "Expecting Indirect, but got %s, icnt left %u",
+            str_nexusrv_trace_event(event), nexusrv_trace_available_icnt(decoder));
         throw rv_inst_exc_failed{-nexus_trace_mismatch};
+    }
     nexusrv_trace_indirect indir;
     int rc = nexusrv_trace_next_indirect(decoder, &indir);
     if (rc < 0)
@@ -140,6 +153,13 @@ string rv_ib_indir_call::to_string() const {
 
 uint64_t rv_ib_ret::retire(nexusrv_trace_decoder *decoder) {
     auto event = check_exc(decoder);
+    if (event == NEXUSRV_Trace_Event_Error) {
+        /* The Error event is right after
+         * We can't tell whether we should have got the
+         * IndirBranch or not. Thus, we are unable to retire the block
+         */
+        throw rv_inst_exc_event{addr + icnt * 2, event};
+    }
     stacksz = nexusrv_trace_callstack_used(decoder);
     IRO = false;
     if (event == NEXUSRV_Trace_Event_Indirect) {
@@ -212,8 +232,11 @@ uint64_t rv_ib_int::retire(nexusrv_trace_decoder *decoder) {
         throw rv_inst_exc_failed{retired};
     if ((uint32_t)retired < icnt - insn->size / 2)
         throw rv_inst_exc_event{addr + retired * 2, event};
-    if (event != NEXUSRV_Trace_Event_Trap)
+    if (event != NEXUSRV_Trace_Event_Trap) {
+        error(0, 0, "Expecting Trap, but got %s, icnt left %u",
+            str_nexusrv_trace_event(event), nexusrv_trace_available_icnt(decoder));
         throw rv_inst_exc_failed{-nexus_trace_mismatch};
+    }
     nexusrv_trace_indirect indir;
     int rc = nexusrv_trace_next_indirect(decoder, &indir);
     if (rc < 0)
