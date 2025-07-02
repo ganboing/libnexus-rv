@@ -38,7 +38,7 @@ gen_openocd_scr() {
   echo "halt;"
   local tdata1=$(printf '0x%x' $(( \
     $MCONTROL6_EXEC | \
-    $MCONTROL6_S | \
+    $MCONTROL6_S | $MCONTROL6_VS | \
     $MCONTROL6_DMODE | \
     ($MCONTROL6_TRACE_SYNC << $MCONTROL6_ACT_SHIFT) )) )
   local wp
