@@ -51,7 +51,7 @@ int open_seek_file(char *filename, int oflags) {
     size_t file_offset = 0;
     char *offset_str = strchr(filename, ':');
     if (offset_str != NULL) {
-        file_offset = strtoul(offset_str, NULL, 0);
+        file_offset = strtoul(offset_str + 1, NULL, 0);
         *offset_str = '\0';
     }
     int fd = STDIN_FILENO;
