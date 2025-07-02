@@ -295,6 +295,8 @@ int nexusrv_trace_sync_reset(nexusrv_trace_decoder* decoder,
     decoder->synced = 1;
     // Downgrade to ProgTraceSync
     decoder->msg.tcode = NEXUSRV_TCODE_ProgTraceSync;
+    // Reset I-CNT: Do not retire any instruction
+    decoder->msg.icnt = 0;
     return nexusrv_trace_next_sync(decoder, sync);
 }
 
