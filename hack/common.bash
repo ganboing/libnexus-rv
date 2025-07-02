@@ -17,7 +17,7 @@ CMAKE_BUILD_OPTS["DebugAsan"]="$(quote_args "-DCMAKE_BUILD_TYPE=Debug" \
 )"
 CMAKE_BUILD_OPTS["Release"]="$(quote_args "-DCMAKE_BUILD_TYPE=Release" \
 )"
-CMAKE_BUILD_OPTS["RelAsan"]="$(quote_args "-DCMAKE_BUILD_TYPE=Release" \
+CMAKE_BUILD_OPTS["RelAsan"]="$(quote_args "-DCMAKE_BUILD_TYPE=RelWithDebInfo" \
   "-DCMAKE_C_FLAGS=$ASAN_OPTS" \
   "-DCMAKE_CXX_FLAGS=$ASAN_OPTS" \
 )"
