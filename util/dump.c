@@ -11,6 +11,7 @@
 #include <error.h>
 #include <string.h>
 #include <fcntl.h>
+#include <libnexus-rv/error.h>
 #include <libnexus-rv/msg-decoder.h>
 #include "opts-def.h"
 #include "misc.h"
@@ -45,23 +46,25 @@ static void dump(nexusrv_hw_cfg *hwcfg, FILE *fp, int fd, int16_t filter, size_t
         error(-1, 0, "Failed to allocate buffer");
     nexusrv_msg_decoder msg_decoder = {};
     nexusrv_msg_decoder_init(&msg_decoder, hwcfg, fd, filter, buffer, bufsz);
-    size_t decoded_bytes = 0;
     ssize_t rc;
-    for (;; decoded_bytes += rc, ++msgid) {
+    size_t total_bytes = 0;
+    for (;; ++msgid) {
         nexusrv_msg msg;
         rc = nexusrv_msg_decoder_next(&msg_decoder, &msg);
+        size_t offset = nexusrv_msg_decoder_offset(&msg_decoder);
         if (rc < 0)
-            error(-rc, 0, "Failed to decode msg: %d", (int)rc);
+            error(-rc, 0, "Failed to decode msg: %s", str_nexus_error(-rc));
+        total_bytes += rc;
         if (!rc)
             break;
-        fprintf(fp, "Msg #%zu +%zu ", msgid, decoded_bytes);
+        fprintf(fp, "Msg #%zu +%zu ", msgid, offset);
         nexusrv_print_msg(fp, &msg);
         fputc('\n', fp);
     }
     fflush(fp);
     free(buffer);
     fprintf(stderr, "\n Total: %zu Msg, Decoded %zu bytes\n",
-            msgid, decoded_bytes);
+            msgid, total_bytes);
 }
 
 int main(int argc, char **argv) {
