@@ -25,6 +25,7 @@ MCONTROL6_TRACE_ON=2
 MCONTROL6_TRACE_OFF=3
 MCONTROL6_TRACE_SYNC=4
 MCONTROL6_DMODE=0x800000000000000
+MCONTROL6_TYPE=0x6000000000000000
 
 if [[ $NUM_TRIG_USED -gt $NUM_TRIGGERS ]]; then
   echo "Specified more than $NUM_TRIGGERS addresses" >&2
@@ -38,25 +39,22 @@ gen_openocd_scr() {
   echo "halt;"
   local tdata1=$(printf '0x%x' $(( \
     $MCONTROL6_EXEC | \
-    $MCONTROL6_S | $MCONTROL6_VS | \
-    $MCONTROL6_DMODE | \
+    $MCONTROL6_S | \
+    $MCONTROL6_VS | \
+    $MCONTROL6_DMODE | $MCONTROL6_TYPE | \
     ($MCONTROL6_TRACE_SYNC << $MCONTROL6_ACT_SHIFT) )) )
   local wp
   for cpu in "${CPUS[@]}"; do
+    #echo "riscv.cpu$cpu riscv set_ebreaku off;"
+    #echo "riscv.cpu$cpu riscv set_ebreaks off;"
     for (( wp=0; wp<$NUM_TRIG_FREE; wp++)); do
       echo "riscv.cpu$cpu set_reg {tselect $wp tdata1 0 tdata2 0};"
     done
     for (( wp=0; wp<$#; wp++)) do
       echo "riscv.cpu$cpu set_reg {tselect $((wp + NUM_TRIG_FREE)) tdata1 $tdata1 tdata2 ${addrs[$wp]}};"
     done
-    echo "riscv.cpu$cpu riscv set_ebreaku off;"
-    echo "riscv.cpu$cpu riscv set_ebreaks off;"
   done
-  echo "resume; exit;"
+  echo "resume;"
 }
 
-cmd="$(gen_openocd_scr "$@")"
-
-set -x
-
-exec openocd -f "$DIR/openocd.cfg" -c "$cmd"
+gen_openocd_scr "$@"
