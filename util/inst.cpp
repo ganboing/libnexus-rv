@@ -47,9 +47,10 @@ unsigned rv_inst_block::check_exc(nexusrv_trace_decoder *decoder) {
             case NEXUSRV_Trace_Event_Error:
                 throw rv_inst_exc_event{addr + retired * 2, event};
         }
-        error(-1, 0,
+        error(0, 0,
               "Expecting trap/sync/error, but got %s, icnt=%" PRIi32,
               str_nexusrv_trace_event(event), retired);
+        throw rv_inst_exc_failed{-nexus_trace_mismatch};
     }
     return event;
 }
@@ -162,14 +163,15 @@ uint64_t rv_ib_ret::retire(nexusrv_trace_decoder *decoder) {
     }
     stacksz = nexusrv_trace_callstack_used(decoder);
     IRO = false;
+    uint64_t target;
     if (event == NEXUSRV_Trace_Event_Indirect) {
+        nexusrv_trace_pop_ret(decoder, &target);
         nexusrv_trace_indirect indir;
         int rc = nexusrv_trace_next_indirect(decoder, &indir);
         if (rc < 0)
             throw rv_inst_exc_failed{rc};
         return indir.target;
     }
-    uint64_t target;
     int rc = nexusrv_trace_pop_ret(decoder, &target);
     if (rc < 0)
         throw rv_inst_exc_failed{rc};
@@ -181,14 +183,14 @@ int rv_ib_ret::print(FILE *fp) const {
     return rv_inst_block::print(fp) +
         fprintf(fp, "%s [stack:%u->%u]",
                 IRO ? " [implicit]" : " [explicit]",
-                stacksz, IRO ? stacksz - 1 : stacksz);
+                stacksz, stacksz - 1);
 }
 
 string rv_ib_ret::to_string() const {
     return cppfmt("%s %s%s [stack:%u->%u]",
         insn->mnemonic, insn->op_str,
         IRO ? " [implicit]" : " [explicit]",
-        stacksz, IRO ? stacksz - 1 : stacksz);
+        stacksz, stacksz ? stacksz - 1 : 0);
 }
 
 uint64_t rv_ib_co_swap::retire(nexusrv_trace_decoder *decoder) {
