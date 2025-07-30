@@ -78,29 +78,36 @@ at `/usr/local/lib/python3.12/dist-packages/rvtrace/platforms/p550.cfg`. If any
 change is required, make a copy of it and use `-c` to specify the modified one.
  In the default configuration, HTM is used with maximum periodic SYNC.
 
-### Install other utilities
-
-* Follow instruction [here](https://github.com/ganboing/linuxlib/blob/master/README.md)
-to install *linuxlib*, my collection of linux utilities to facilitate trace capture
-
-### Use openocd to install watchpoint trigger
+### Install the rvtrace-trigger kernel module to have trace SYNC triggers
 
 Before we start trace capture, there's one extra step. Given that P550 hard-wires
 simple counting for implicit return optimization, it doesn't detect function return
 address mismatches. Due to this limitation, the return stack will be messed up upon
-context switch (task switch) in Linux, and we haven't got to virtualization yet.
-Thus, we need to explicitly clear the encoder's return stack at least during task
-switch. This is achieved by installing a watchpoint to __switch_to function and
-set the action to Trace SYNC. Per the spec, a SYNC will clear the stack, and it's
-verified to be the case in P550.
+context switch (task switch) in Linux. The same would happen on KVM world switches
+as well. Thus, we need to explicitly clear the encoder's return stack upon context
+switch. This is achieved by utilizing the DBTR extension in OpenSBI to install
+triggers that fire upon \__switch_to (host task switch), \__kvm_switch_resume
+(Host -> VM) and \__kvm_switch_return (VM -> Host). The triggers are set to action
+4 (Trace SYNC). When hit, a SYNC message with reason 6 is generated that resets the
+encoder return stack.
 
-The `trace-sync-on-task-switch.sh` script is intended to do this for you. Assuming
-you already have the target P550 machine, such as HiFive Premier P550, and its JTAG
-is connected to the host machine. Run
 ```shell
-$ ./trace-sync-on-task-switch.sh <path to System.map or kallsyms>
+$ cd rvtrigger
+$ make
+$ sudo insmod rvtrace-trigger.ko
+$ dmesg
+[33446.074983] rvtrace_trigger:rvtrigger_cpu_online: starting cpu 0
+...
+[33446.075043] rvtrace_trigger:rvtrigger_cpu_online: trig 0: state=0x15 tdata1=0x6000000001004014 tdata2=0xffffffffb7e0a700 tdata3=0x0
+[33446.075050] rvtrace_trigger:rvtrigger_cpu_online: trig 1: state=0x115 tdata1=0x6000000001004014 tdata2=0xffffffffb722c7a6 tdata3=0x0
+[33446.075056] rvtrace_trigger:rvtrigger_cpu_online: trig 2: state=0x215 tdata1=0x6000000001004014 tdata2=0xffffffffb722c7ac tdata3=0x0
+
 ```
-It'll configure the watchpoints in debug module through debug interface.
+
+### Install other utilities
+
+* Follow instruction [here](https://github.com/ganboing/linuxlib/blob/master/README.md)
+  to install *linuxlib*, my collection of linux utilities to facilitate trace capture
 
 ### Capture trace
 
